@@ -18,12 +18,12 @@ const parseElvesFromInput = (input: string[]): Elves => {
 
 const sortElvesByCaloriesDesc = (elves: Elves) => elves.sort((a, b) => b - a);
 
-const partOne = (sortedElves: Elves): number => sortedElves[0] ?? 0;
-const partTwo = (sortedElves: Elves): number => sortedElves.slice(0, 3).reduce((sum, value) => sum + value, 0);
+const partOne_d1 = (sortedElves: Elves): number => sortedElves[0] ?? 0;
+const partTwo_d1 = (sortedElves: Elves): number => sortedElves.slice(0, 3).reduce((sum, value) => sum + value, 0);
 
 exports.solution = (input: string[]) => {
     const elves = parseElvesFromInput(input);
     sortElvesByCaloriesDesc(elves);
-    console.log(partOne(elves));
-    console.log(partTwo(elves));
+    console.log(partOne_d1(elves));
+    console.log(partTwo_d1(elves));
 }
