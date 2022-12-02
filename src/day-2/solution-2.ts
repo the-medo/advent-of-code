@@ -1,6 +1,8 @@
 type HandShape = 'paper' | 'rock' | 'scissors';
 type Outcome = 'win' | 'draw' | 'lose';
-type Move = 'A' | 'B' | 'C' | 'X' | 'Y' | 'Z';
+type TheirMove = 'A' | 'B' | 'C';
+type YourMove = 'X' | 'Y' | 'Z';
+type Move = TheirMove | YourMove;
 
 const MoveToHandShape: Record<Move, HandShape> = {
     A: 'rock',
@@ -9,6 +11,30 @@ const MoveToHandShape: Record<Move, HandShape> = {
     X: 'rock',
     Y: 'paper',
     Z: 'scissors',
+}
+
+const YourMoveToOutcome: Record<YourMove, Outcome> = {
+    X: "lose",
+    Y: "draw",
+    Z: "win"
+}
+
+const OutcomeMatrix: Record<HandShape, Record<HandShape, Outcome>> = {
+    rock: {
+        rock: "draw",
+        paper: "win",
+        scissors: "lose"
+    },
+    paper: {
+        rock: "lose",
+        paper: "draw",
+        scissors: "win"
+    },
+    scissors: {
+        rock: "win",
+        paper: "lose",
+        scissors: "draw"
+    },
 }
 
 const PointsForHandShape: Record<HandShape, number> = {
@@ -23,52 +49,65 @@ const PointsForOutcome: Record<Outcome, number> = {
     win: 6,
 }
 
+interface GameInputs  {
+    theirMove: TheirMove;
+    yourMove: YourMove;
+}
+
 interface GameRound  {
     theirMove: HandShape;
     yourMove: HandShape;
     points: number;
-    outcome?: Outcome;
+    outcome: Outcome;
 }
 
-const evaluateRound = (round: GameRound): GameRound => {
-    if (round.theirMove === round.yourMove) {
-        round.outcome = "draw";
-    } else {
-        switch (round.yourMove) {
-            case "paper":
-                round.outcome = round.theirMove === "scissors" ? "lose" : "win"  /* win in case of rock */;
-                break;
-            case "rock":
-                round.outcome = round.theirMove === "paper" ? "lose" : "win"     /* win in case of scissors */;
-                break;
-            case "scissors":
-                round.outcome = round.theirMove === "rock" ? "lose" : "win"  /* in case of paper */;
-                break;
-        }
-    }
+const parseGameInputsForPartOne = (gi: GameInputs): Pick<GameRound, 'theirMove' | 'yourMove'> => ({
+    theirMove: MoveToHandShape[gi.theirMove],
+    yourMove: MoveToHandShape[gi.yourMove],
+})
 
-    if (round.outcome) {
-        round.points = PointsForHandShape[round.yourMove] + PointsForOutcome[round.outcome];
-    } else {
-        throw Error("Undefined outcome should not happen! " + round.theirMove + " vs. " + round.yourMove);
-    }
-    return round;
+const evaluateRoundsForPartOne = (i: GameInputs ): GameRound => {
+    const round = parseGameInputsForPartOne(i);
+    let outcome: Outcome = OutcomeMatrix[round.theirMove][round.yourMove];
+
+    return {
+        ...round,
+        outcome,
+        points: PointsForHandShape[round.yourMove] + PointsForOutcome[outcome],
+    };
 }
 
+const parseGameInputsForPartTwo = (gi: GameInputs): Pick<GameRound, 'theirMove' | 'outcome'> => ({
+    theirMove: MoveToHandShape[gi.theirMove],
+    outcome: YourMoveToOutcome[gi.yourMove],
+});
 
+const evaluateRoundsForPartTwo = (i: GameInputs ): GameRound => {
+    const round = parseGameInputsForPartTwo(i);
+    const yourMove = (Object.keys(OutcomeMatrix[round.theirMove]) as Array<HandShape>).find(yourMove => OutcomeMatrix[round.theirMove][yourMove] === round.outcome);
 
-const parseStrategyGuideInput = (input: string[]): GameRound[] => {
-    const rounds: GameRound[] = [];
+    if (yourMove) {
+        return {
+            ...round,
+            yourMove,
+            points: PointsForHandShape[yourMove] + PointsForOutcome[round.outcome],
+        };
+    }
+
+    throw Error("Your move not found.");
+}
+
+const parseStrategyGuideInput = (input: string[]): GameInputs[] => {
+    const rounds: GameInputs[] = [];
 
     input.forEach(line => {
         const round: string[] = line.split(" ");
 
         if (round.length === 2 && round[0].length === 1 && round[1].length === 1) {
-            rounds.push(evaluateRound({
-                theirMove: MoveToHandShape[round[0] as Move],
-                yourMove: MoveToHandShape[round[1] as Move],
-                points: 0,
-            }));
+            rounds.push({
+                theirMove: round[0] as TheirMove,
+                yourMove: round[1] as YourMove,
+            });
         } else {
             throw Error("Input row doesn't have exactly two moves!")
         }
@@ -77,9 +116,14 @@ const parseStrategyGuideInput = (input: string[]): GameRound[] => {
     return rounds;
 }
 
-const partOne_d2 = (gameRounds: GameRound[]): number => gameRounds.reduce((sum, round) => sum + round.points, 0);
+const sumPointsFromGameRounds = (gameRounds: GameRound[]): number => gameRounds.reduce((sum, round) => sum + round.points, 0);
 
 exports.solution = (input: string[]) => {
-    const gameRounds = parseStrategyGuideInput(input);
-    console.log(partOne_d2(gameRounds));
+    const gameInputs = parseStrategyGuideInput(input);
+
+    const gameRoundsPartOne = gameInputs.map(i => evaluateRoundsForPartOne(i));
+    const gameRoundsPartTwo = gameInputs.map(i => evaluateRoundsForPartTwo(i));
+
+    console.log(sumPointsFromGameRounds(gameRoundsPartOne));
+    console.log(sumPointsFromGameRounds(gameRoundsPartTwo));
 }
