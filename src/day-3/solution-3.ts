@@ -17,35 +17,29 @@ const addCharToCompartment = (compartment: Compartment, char: string) => {
 }
 
 const isCharCodeInCompartment = (compartment: Compartment, charCode: number) => compartment[charCode] !== undefined;
+const isCharCodeInBackpack = (b: Backpack, charCode: number) => isCharCodeInCompartment(b.leftCompartment, charCode) || isCharCodeInCompartment(b.rightCompartment, charCode);
 const isCharInCompartment = (compartment: Compartment, char: string) => compartment[char.charCodeAt(0)] !== undefined;
 
-const getBadgeFromGroup = (g: ElfGroup) => {
-    const smallestBackpack = g.elves.reduce((acc, val, currentIndex) => {
-        if (Object.keys(acc.leftCompartment).length < Object.keys(val.leftCompartment).length) {
-            return val;
-        }
-        return acc;
-    }, g.elves[0]);
+/*
+    Finding badge from elf group is done in two steps:
+        1. find backack with least amount of items
+        2. iterate through the smallest backpack to find item, thats in all of them
+    It is not necessary, just a bit of optimalization, so we don't need to iterate through backack with 100 items, when there is one backpack with 5 items.
+ */
 
-    for (let charCodeString in {...smallestBackpack.leftCompartment, ...smallestBackpack.rightCompartment}) {
-        const charCode = parseInt(charCodeString);
-        const availableInGroups = g.elves.filter(e =>
-            isCharCodeInCompartment(e.leftCompartment, charCode) ||
-            isCharCodeInCompartment(e.rightCompartment, charCode)
-        )
+const findBadgeInGroup = (g: ElfGroup) => {
+    const smallestBackpack = g.elves.reduce((acc, val) => Object.keys(acc.leftCompartment).length < Object.keys(val.leftCompartment).length ? val : acc, g.elves[0]);
 
+    for (let charCode in {...smallestBackpack.leftCompartment, ...smallestBackpack.rightCompartment}) {
+        const availableInGroups = g.elves.filter(e => isCharCodeInBackpack(e, parseInt(charCode)))
         if (availableInGroups.length === g.elves.length) {
-            g.badge = String.fromCharCode(charCode);
+            g.badge = String.fromCharCode(parseInt(charCode));
+            return;
         }
     }
-
-    console.log("Smallest backpack from group: ", smallestBackpack);
-
-
-
 }
 
-const parseRucksackInput = (input: string[]): Backpack[] => {
+const parseBackpackInput = (input: string[]): Backpack[] => {
     return input.map(line => {
         const halfLength = line.length / 2;
         const leftCompartment: Compartment = {};
@@ -75,15 +69,29 @@ const parseRucksackInput = (input: string[]): Backpack[] => {
     });
 }
 
-const getPoints = (char: string = ''): number => {
+const getPointsFromChar = (char: string = ''): number => {
     const charCode = char.charCodeAt(0);
     if (charCode >= 97) return charCode - 97 + 1; // a-z have 0-26
     if (charCode <= 90) return charCode - 65 + 27; //A-Z have 27-52
     return 0;
 }
 
+const createGroupsFromElves = (backpacks: Backpack[], groupSize: number = 3): ElfGroup[] => {
+    const groups: ElfGroup[] = [];
+
+    backpacks.forEach((b, i) => {
+        if (i % groupSize === 0) groups.push({elves: []});
+        groups[Math.floor(i / groupSize)].elves.push(b);
+    });
+
+    return groups;
+}
+
 exports.solution = (input: string[]) => {
-    const backpacks: Backpack[] = parseRucksackInput(input);
-    console.log(backpacks.reduce((sum, round) => sum + getPoints(round.problematicItem), 0))
-    // console.log('a'.charCodeAt(0), 'z'.charCodeAt(0), 'A'.charCodeAt(0), 'Z'.charCodeAt(0));
+    const elves: Backpack[] = parseBackpackInput(input);
+    console.log(elves.reduce((sum, elf) => sum + getPointsFromChar(elf.problematicItem), 0));
+
+    const groups = createGroupsFromElves(elves);
+    groups.forEach(g => findBadgeInGroup(g));
+    console.log(groups.reduce((sum, group) => sum + getPointsFromChar(group.badge), 0));
 }
