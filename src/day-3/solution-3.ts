@@ -22,9 +22,9 @@ const isCharInCompartment = (compartment: Compartment, char: string) => compartm
 
 /*
     Finding badge from elf group is done in two steps:
-        1. find backack with least amount of items
-        2. iterate through the smallest backpack to find item, thats in all of them
-    It is not necessary, just a bit of optimalization, so we don't need to iterate through backack with 100 items, when there is one backpack with 5 items.
+        1. find backpack with the least amount of items
+        2. iterate through the smallest backpack to find item, that's in all of them
+    It is not necessary, just a bit of optimization - we don't need to iterate through backpack with 100 items, when there is one backpack with 5 items.
  */
 
 const findBadgeInGroup = (g: ElfGroup) => {
