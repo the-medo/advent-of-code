@@ -36,6 +36,14 @@ const addSizeToDir = (d: Dir, s: number) => {
     if (d.parent !== null) addSizeToDir(d.parent, s);
 }
 
+const findNearestTo = (finding: number, dir: Dir): number => {
+    const arr = dir.dirs.map(d => findNearestTo(finding, d)).filter(f => f >= finding);
+    if (arr.length > 0) {
+        return Math.min.apply(null, arr);
+    }
+    return dir.dirSize;
+}
+
 
 exports.solution = (input: string[]) => {
     const root: Dir = {
@@ -45,6 +53,7 @@ exports.solution = (input: string[]) => {
         files: [],
         dirSize: 0,
     }
+
 
     const ad: Active = {
         dir: root
@@ -92,10 +101,14 @@ exports.solution = (input: string[]) => {
             });
         }
 
-    })
-
-
-
-
+    });
     console.log(checkAndAdd(root, 100000));
+
+    const totalDiskSpace = 70000000;
+    const diskSpaceNeeded = 30000000;
+    const freeSpaceNow = totalDiskSpace - root.dirSize;
+    const neededToFree = diskSpaceNeeded - freeSpaceNow;
+    console.log("Root dir size: ", root.dirSize, "; Needed to free: ", neededToFree, "; Free space now:", freeSpaceNow);
+    console.log(findNearestTo(neededToFree, root));
+
 }
