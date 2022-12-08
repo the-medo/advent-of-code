@@ -4,14 +4,12 @@ type Tree = {
     score: number,
 }
 
-const countVisible = (map: Tree[][]) => {
-    let visible = 0;
-    for (let i = 0; i < map.length; i++) {
-        for (let j = 0; j < map[0].length; j++) {
-            if (map[i][j].visible) visible++;
-        }
+const compareAndSetVisible = (map: Tree[][], i: number, j: number, highest: number): number => {
+    if (map[i][j].h > highest) {
+        highest = map[i][j].h;
+        map[i][j].visible = true;
     }
-    return visible;
+    return highest
 }
 
 const getVisibility = (map: Tree[][]) => {
@@ -20,42 +18,20 @@ const getVisibility = (map: Tree[][]) => {
 
     for (let i = 0; i < noOfRows; i++) {
         let highestFromLeft = -1;
-        for (let j = 0; j < noOfCols; j++) {
-            if (map[i][j].h > highestFromLeft) {
-                highestFromLeft = map[i][j].h;
-                map[i][j].visible = true;
-            }
-        }
-
         let highestFromRight = -1;
-        for (let j = noOfCols - 1; j >= 0; j--) {
-            if (map[i][j].h > highestFromRight) {
-                highestFromRight = map[i][j].h;
-                map[i][j].visible = true;
-            }
-        }
+        for (let j = 0; j < noOfCols; j++) highestFromLeft = compareAndSetVisible(map, i, j, highestFromLeft);
+        for (let j = noOfCols - 1; j >= 0; j--) highestFromRight = compareAndSetVisible(map, i, j, highestFromRight);
     }
 
     for (let j = 0; j < noOfCols; j++) {
         let highestFromTop = -1;
-        for (let i = 0; i < noOfRows; i++) {
-            if (map[i][j].h > highestFromTop) {
-                highestFromTop = map[i][j].h;
-                map[i][j].visible = true;
-            }
-        }
-
         let highestFromBottom = -1;
-        for (let i = noOfRows - 1; i >= 0 ; i--) {
-            if (map[i][j].h > highestFromBottom) {
-                highestFromBottom = map[i][j].h;
-                map[i][j].visible = true;
-            }
-        }
+        for (let i = 0; i < noOfRows; i++) highestFromTop = compareAndSetVisible(map, i, j, highestFromTop);
+        for (let i = noOfRows - 1; i >= 0 ; i--) highestFromBottom = compareAndSetVisible(map, i, j, highestFromBottom);
     }
 }
 
-const getScoreForPoint = (row: number, col: number, map: Tree[][]) => {
+const getScoreForTree = (row: number, col: number, map: Tree[][]) => {
     const tree = map[row][col];
     const noOfRows = map.length;
     const noOfCols = map[0].length;
@@ -88,16 +64,14 @@ const getScoreForPoint = (row: number, col: number, map: Tree[][]) => {
 }
 
 const getScores = (map: Tree[][]) => {
-    const noOfRows = map.length;
-    const noOfCols = map[0].length;
-
-    for (let i = 1; i < noOfRows - 1; i++) {
-        for (let j = 1; j < noOfCols - 1; j++) {
-            getScoreForPoint(i, j, map);
+    for (let i = 1; i < map.length - 1; i++) {
+        for (let j = 1; j < map[0].length - 1; j++) {
+            getScoreForTree(i, j, map);
         }
     }
 }
 
+const getVisibleTreeCount = (map: Tree[][]): number =>  map.map(m => m.reduce( (p, cTree) =>  p + (cTree.visible ? 1 : 0), 0 )).reduce((p, c) => p + c, 0 );
 const getMaxScore = (map: Tree[][]): number =>  Math.max.apply(null, map.map(m => m.reduce( (prev, current) =>  current.score > prev ? current.score : prev, 0 )));
 
 exports.solution = (input: string[]) => {
@@ -120,6 +94,6 @@ exports.solution = (input: string[]) => {
     getVisibility(map);
     getScores(map);
 
-    console.log(countVisible(map));
+    console.log(getVisibleTreeCount(map));
     console.log(getMaxScore(map));
 }
