@@ -2,7 +2,7 @@ const _ = require('lodash');
 type MonkeyOperationType = "*" | "+";
 type MonkeyOperation = {
     type: MonkeyOperationType,
-    value: bigint | "old",
+    value: number | "old",
 }
 
 type MonkeyTest = {
@@ -12,7 +12,7 @@ type MonkeyTest = {
 }
 
 type Monkey = {
-    items: bigint[],
+    items: number[],
     operation: MonkeyOperation;
     test: MonkeyTest;
     inspections: number;
@@ -22,7 +22,7 @@ const DefaultMonkey = (): Monkey => ({
     items: [],
     operation: {
         type: "*",
-        value: BigInt('0'),
+        value: 0,
     },
     test: {
         divisible: 1,
@@ -32,19 +32,19 @@ const DefaultMonkey = (): Monkey => ({
     inspections: 0,
 });
 
-const evaluateMonkeyOperation = (input: bigint, operation: MonkeyOperation, part: number = 1): bigint => {
+const evaluateMonkeyOperation = (input: number, operation: MonkeyOperation, mod: number, part: number = 1): number => {
     let result = (operation.value === "old" ? input : operation.value);
     if (operation.type === "*") result = result * input;
     if (operation.type === "+") result = result + input;
-    return part === 1 ? result / BigInt(3) : result;
+    return part === 1 ? Math.floor(result / 3) : result % mod;
 }
 
-const evaluateMonkeyTest = (input: bigint, test: MonkeyTest): number => input % BigInt(test.divisible) === BigInt(0) ? test.true : test.false;
+const evaluateMonkeyTest = (input: number, test: MonkeyTest): number => input % test.divisible ===0 ? test.true : test.false;
 
-const monkeyRound = (monkeys: Monkey[], part: number = 1) => {
+const monkeyRound = (monkeys: Monkey[], mod: number = 0, part: number = 1) => {
     for (let i = 0; i < monkeys.length; i++) {
         while (monkeys[i].items.length) {
-            const item = evaluateMonkeyOperation(monkeys[i].items.shift() ?? BigInt(0), monkeys[i].operation, part);
+            const item = evaluateMonkeyOperation(monkeys[i].items.shift() ?? 0, monkeys[i].operation, mod, part);
             monkeys[i].inspections++;
             monkeys[evaluateMonkeyTest(item, monkeys[i].test)].items.push(item);
         }
@@ -57,12 +57,12 @@ exports.solution = (input: string[]) => {
 
     input.forEach((l, i) => {
         if (i % 7 === 0) monkeys[id] = DefaultMonkey();
-        else if (i % 7 === 1) monkeys[id].items = l.replace("  Starting items: ", "").split(", ").map(i => BigInt(i));
+        else if (i % 7 === 1) monkeys[id].items = l.replace("  Starting items: ", "").split(", ").map(i => parseInt(i));
         else if (i % 7 === 2) {
             const parsed = l.replace("  Operation: new = old ", "").split(" ");
             monkeys[id].operation = {
                 type: parsed[0] as MonkeyOperationType,
-                value: parsed[1] === "old" ? "old" : BigInt(parsed[1]),
+                value: parsed[1] === "old" ? "old" : parseInt(parsed[1]),
             };
         }
         else  if (i % 7 === 3) monkeys[id].test.divisible = parseInt(l.replace("  Test: divisible by ", ""));
@@ -73,10 +73,13 @@ exports.solution = (input: string[]) => {
     const monkeys2: Monkey[] = _.cloneDeep(monkeys);
 
     const roundCount1 = 20;
-    for (let i = 0; i < roundCount1; i++) monkeyRound(monkeys, 1);
-    console.log(monkeys.sort((a, b) => b.inspections - a.inspections).slice(0, 2).reduce((p, c) => p * c.inspections, 1));
+    for (let i = 0; i < roundCount1; i++) monkeyRound(monkeys);
+    console.log("Part 1, with dividing by 3, 20 rounds: ", monkeys.sort((a, b) => b.inspections - a.inspections).slice(0, 2).reduce((p, c) => p * c.inspections, 1));
+
+    const mulOfDivisors = monkeys.reduce((p, c) => p * c.test.divisible, 1);
+    console.log("Multiplication of divisors: " + mulOfDivisors);
 
     const roundCount2 = 10000;
-    for (let i = 0; i < roundCount2; i++) monkeyRound(monkeys2, 2);
-    console.log(monkeys2.sort((a, b) => b.inspections - a.inspections).slice(0, 2).reduce((p, c) => p * c.inspections, 1));
+    for (let i = 0; i < roundCount2; i++) monkeyRound(monkeys2, mulOfDivisors, 2);
+    console.log("Part 2, without dividing, 10000 rounds: ", monkeys2.sort((a, b) => b.inspections - a.inspections).slice(0, 2).reduce((p, c) => p * c.inspections, 1));
 }
