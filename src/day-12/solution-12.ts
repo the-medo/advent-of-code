@@ -14,8 +14,8 @@ type ImportantPoints = {
     end: P;
 }
 
-const createPoint = (char: string): P => ({
-    elevation: char.charCodeAt(0),
+const createPoint = (char?: string): P => ({
+    elevation: char ? char.charCodeAt(0) : 0,
     neighbors: [],
     distance: -1,
 });
@@ -31,15 +31,18 @@ const visitP = (stack: PVisit[]) => {
 
 exports.solution = (input: string[]) => {
     const ip: ImportantPoints = {
-        start: createPoint("A"),
-        end: createPoint("Z"),
+        start: createPoint(),
+        end: createPoint(),
     }
+
+    const aPoints: P[] = [];
 
     const map: P[][] = input.map((l) =>  l.split("").map(x => {
         let c = x;
         if (x === 'S') c = 'a';
         if (x === 'E') c = 'z';
         const p = createPoint(c);
+        if (c === 'a') aPoints.push(p);
         if (x === 'S') ip.start = p;
         if (x === 'E') ip.end = p;
         return p;
@@ -49,13 +52,16 @@ exports.solution = (input: string[]) => {
         row.forEach((p, x) => {
             if (x > 0 && row[x - 1].elevation - p.elevation <= 1)  p.neighbors.push(row[x - 1]);
             if (x < row.length - 1 && row[x + 1].elevation - p.elevation <= 1) p.neighbors.push(row[x + 1]);
-            if (y > 0 && map[y - 1][x].elevation  - p.elevation <= 1) p.neighbors.push(map[y - 1][x]);
+            if (y > 0 && map[y - 1][x].elevation - p.elevation <= 1) p.neighbors.push(map[y - 1][x]);
             if (y < map.length - 1 && map[y + 1][x].elevation - p.elevation <= 1) p.neighbors.push(map[y + 1][x]);
         });
     });
 
-    const stack: PVisit[] = [{p: ip.start, newDistance: 0}];
-    while (stack.length > 0) visitP(stack);
+    const stack1: PVisit[] = [{p: ip.start, newDistance: 0}];
+    while (stack1.length > 0) visitP(stack1);
+    console.log(`Part 1: ${ip.end.distance} steps`);
 
-    console.log(ip.end);
+    const stack2: PVisit[] = aPoints.map(p => ({p, newDistance: 0}));
+    while (stack2.length > 0) visitP(stack2);
+    console.log(`Part 2: ${ip.end.distance} steps`);
 }
