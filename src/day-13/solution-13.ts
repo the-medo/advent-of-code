@@ -1,25 +1,31 @@
+const cloneDeep = require('lodash/cloneDeep');
+
 type PacketData = {
-    parent: null | PacketData,
-    data: (PacketData | number)[]
+    parent?: PacketData,
+    data: (PacketData | number)[],
+    isSpecial: boolean,
+    stringInterpretation?: string,
 }
 
 type PacketPair = {
     id: number;
     left: PacketData;
     right: PacketData;
-    correct?: boolean;
+    correctOrder?: boolean;
 }
 
-const basePacket = (parent: null | PacketData = null): PacketData => ({parent, data: []})
-const parsePacket = (p: string): PacketData => {
-    const pd = basePacket();
+const basePacket = (parent?: PacketData, isSpecial: boolean = false): PacketData => ({parent, data: [], isSpecial});
+
+const parsePacket = (p: string, isSpecial: boolean = false): PacketData => {
+    const pd = basePacket(undefined, isSpecial);
+    pd.stringInterpretation = p;
     let activePd: PacketData = pd;
     const chars = p.split("");
     let numberChars = '';
 
     chars.forEach(c => {
         if (c === '[') {
-            const newData = basePacket(activePd);
+            const newData = basePacket(activePd, isSpecial);
             activePd.data.push(newData);
             activePd = newData;
         }
@@ -39,43 +45,36 @@ const parsePacket = (p: string): PacketData => {
     return pd;
 }
 
-const comparePacketData = (l: PacketData | number | undefined, r: PacketData | number | undefined): boolean | undefined => {
-    console.log("==========")
-    console.log("Left: ", typeof l === "number" ? l : l?.data)
-    console.log("Right: ", typeof r === "number" ? r : r?.data)
+const comparePacketData = (l?: PacketData | number, r?: PacketData | number): boolean | undefined => {
 
-    if (l === undefined) {
-        if (r === undefined) return undefined;
-        return true;
-    } else if (r === undefined) {
-        return false;
-    }
+    if (l === undefined) return r === undefined ? undefined : true;
+    else if (r === undefined) return false;
 
     if (typeof l === "number") {
         if (typeof r === "number") {
-            console.log("NUMBER VS NUMBER"); //compare 6 with 6
             return l === r ? undefined : l < r;
-        } else {
-            console.log("NUMBER VS DATA"); //compare 6 with [[6,7,8]]
-            let rightNum = r.data.shift(); //[6,7,8]
+        } else { // RIGHT is of type "PacketData"
+            let size = r.data.length;
+            let rightNum = r.data.shift();
             while (typeof rightNum !== "number" && rightNum !== undefined) {
+                size = rightNum.data.length;
                 rightNum = rightNum.data.shift();
             }
             const result = comparePacketData(l, rightNum);
-            return result === undefined ? true : result;
+            return result === undefined ? (size > 1 ? true : undefined) : result;
         }
-    } else {
+    } else { // LEFT is of type "PacketData"
         if (typeof r === "number") {
-            console.log("DATA VS NUMBER"); //compare [[6,7,8]] with 6
+            let size = l.data.length;
             let leftNum = l.data.shift();
+            let result;
             while (typeof leftNum !== "number" && leftNum !== undefined) {
-                leftNum = leftNum.data.shift(); //[6,7,8]
+                size = leftNum.data.length;
+                leftNum = leftNum.data.shift();
             }
-            const result = comparePacketData(leftNum, r);
-            return result === undefined ? false : result;
-
-        } else {
-            console.log("DATA VS DATA"); //compare [[6,7,8]] with [6,7,8]
+            result = comparePacketData(leftNum, r);
+            return result === undefined && size !== 1 ? false : result;
+        } else { // both are of type "PacketData"
             let result;
             let leftNum;
             let rightNum;
@@ -83,26 +82,34 @@ const comparePacketData = (l: PacketData | number | undefined, r: PacketData | n
                 leftNum = l.data.shift();
                 rightNum = r.data.shift();
                 result = comparePacketData(leftNum, rightNum);
-            } while (result === undefined && (leftNum !== undefined || rightNum !== undefined ) );
+            } while (result === undefined && (leftNum !== undefined || rightNum !== undefined) );
             return result;
         }
     }
 }
 
-const comparePacketPair = (pp: PacketPair) => pp.correct = comparePacketData(pp.left, pp.right) ?? true;
+const comparePacketsAndKeepData = (l?: PacketData | number, r?: PacketData | number): boolean | undefined => comparePacketData(cloneDeep(l), cloneDeep(r));
+
+const comparePacketPair = (pp: PacketPair) => pp.correctOrder = comparePacketsAndKeepData(pp.left, pp.right) ?? true;
 
 exports.solution = (input: string[]) => {
-
     const packetPairs: PacketPair[] = [];
+    const allPackets: PacketData[] = [];
+
     input.forEach((l, i) => {
         if (i % 3 === 0) packetPairs.push({id: Math.floor(i / 3) + 1, left: parsePacket(l), right: basePacket()});
         if (i % 3 === 1) packetPairs[ Math.floor(i / 3) ].right = parsePacket(l);
-        if (i % 3 === 2) return;
+        if (i % 3 !== 2) allPackets.push(parsePacket(l));
     });
 
+    allPackets.push(parsePacket('[[2]]', true));
+    allPackets.push(parsePacket('[[6]]', true));
+
     packetPairs.forEach(pp => comparePacketPair(pp));
+    console.log("Total sum of PacketPair IDs in right order: ", packetPairs.reduce((p, c) => p + (c.correctOrder ? c.id : 0), 0 ));
 
-    console.log("Total sum of PacketPair IDs in right order: ", packetPairs.reduce((p, c) => p + (c.correct ? c.id : 0), 0 ))
-
+    allPackets.sort((a, b) => (comparePacketsAndKeepData(a, b) ? -1 : 1) );
+    // allPackets.map((p) => console.log(p.stringInterpretation));
+    console.log("Decoder key: ", allPackets.map((p, i) => p.isSpecial ? i + 1 : 0).reduce((p, c) => p * (c > 0 ? c : 1), 1));
 
 }
