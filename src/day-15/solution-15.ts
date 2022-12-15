@@ -19,15 +19,19 @@ const IntToRowId = (n: number) => n >= 0 ? `p${n}` : `m${-n}`;
 const ManhattanDistance = (p1: Coordinates, p2: Coordinates) => Math.abs(p1.x - p2.x) + Math.abs(p1.y-p2.y);
 
 exports.solution = (input: string[]) => {
- //Sensor at x=2, y=18: closest beacon is at x=-2, y=15
+
+    const findRowId = 2000000;
+
     const sensorInfo: SensorBeaconPair[] = input.map(i => i.replace('Sensor at x=','').split(': closest beacon is at x=').map(a => a.split(", y=").map(b => parseInt(b)))).map(coords => ({sensor: {x: coords[0][0], y: coords[0][1]}, beacon: {x: coords[1][0], y: coords[1][1]}}))
 
     const lines: CheckedLinesInRows = {}
 
     sensorInfo.forEach(si => {
         const distance = ManhattanDistance(si.sensor, si.beacon);
-        for (let y = -distance; y <=  distance; y++) {
-            const rowId = IntToRowId(si.sensor.y + y);
+        const r = findRowId;
+        if (si.sensor.y - distance <= r && si.sensor.y + distance >= r) {
+            const y = si.sensor.y - r;
+            const rowId = IntToRowId(r);
             if (!lines[rowId]) lines[rowId] = [];
             lines[rowId].push({
                 start: si.sensor.x - Math.abs(Math.abs(y) - distance),
@@ -54,7 +58,6 @@ exports.solution = (input: string[]) => {
         });
     } );
 
-    const rowId = 2000000;
-    console.log(mergedLines[IntToRowId(rowId)].reduce((p, c) => p + (c.end - c.start), 0));
+    console.log(mergedLines[IntToRowId(findRowId)].reduce((p, c) => p + (c.end - c.start), 0));
 
 }
