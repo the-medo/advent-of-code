@@ -9,7 +9,44 @@ type Valve = {
     connections: ValveConnection[];
 }
 
-const volcanoAction = () => {
+const valveArray: Valve[] = [];
+const valveRecord: Record<string, Valve> = {}
+const connectionInfo: Record<string, string[]> = {};
+const cloneActionStatus = require('lodash/cloneDeep.js');
+const maxMinute = 30;
+
+let counter = 0;
+
+const action = (currentValve: Valve, lastVisited: string, openedValves: string[], totalFlowRate: number, minute: number) => {
+    counter++;
+    console.log(counter, currentValve.id, lastVisited, openedValves, totalFlowRate, minute);
+
+    const isAlreadyOpened = openedValves.find(v => v === currentValve.id);
+    if (minute >= maxMinute) return totalFlowRate;
+
+    const results: number[] = [];
+
+    if (!isAlreadyOpened) results.push(action(
+        currentValve,
+        currentValve.id,
+        [...openedValves, currentValve.id],
+        totalFlowRate + currentValve.flowRate * (maxMinute - (minute + 1)),
+        minute + 1 )
+    );
+
+    currentValve.connections.forEach(c => results.push(action(
+        c.valve,
+        currentValve.id,
+        [...openedValves],
+        totalFlowRate,
+        minute + c.distance )
+    ));
+
+
+
+    return results.length > 0 ? Math.max(...results) : totalFlowRate;
+
+
     //openedValves: string[];
     //totalFlowRate: number
     //minute: number
@@ -30,12 +67,6 @@ const volcanoAction = () => {
 const createValve = (id: string, flowRate: number): Valve => ({id, flowRate, connections: []})
 
 exports.solution = (input: string[]) => {
-    const cloneDeep = require('lodash/cloneDeep.js');
-
-    //Valve II has flow rate=0; tunnels lead to valves AA, JJ
-    const valveArray: Valve[] = [];
-    const valveRecord: Record<string, Valve> = {}
-    const connectionInfo: Record<string, string[]> = {};
 
     input.forEach(i => {
        const [valveId, flowRate, connections] = i.replace('Valve ', '')
@@ -58,7 +89,7 @@ exports.solution = (input: string[]) => {
 
     //TODO: dont remove first point
     valveArray.forEach(v => {
-       if (v.flowRate === 0) {
+       if (v.flowRate === 0 && v.id !== 'AA') {
            console.log("Found valve with flow 0: ", v.id);
 
            v.connections.forEach(c1 => {
@@ -83,7 +114,15 @@ exports.solution = (input: string[]) => {
        }
     });
 
+
+
     console.log(valveRecord);
     console.log("------------");
-    console.log(valveRecord['E'].connections);
+
+    const startingValve: Valve = valveRecord['AA'];
+
+    // console.log()
+
+    const result = action(startingValve, startingValve.id, [startingValve.id], 0, 0);
+    console.log("Result: ", result);
 }
