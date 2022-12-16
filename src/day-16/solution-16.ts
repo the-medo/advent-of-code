@@ -9,59 +9,36 @@ type Valve = {
     connections: ValveConnection[];
 }
 
-const valveArray: Valve[] = [];
+let valveArray: Valve[] = [];
 const valveRecord: Record<string, Valve> = {}
+const valveDistances: Record<string, Record<string, number>> = {};
 const connectionInfo: Record<string, string[]> = {};
-const cloneActionStatus = require('lodash/cloneDeep.js');
+
 const maxMinute = 30;
 
 let counter = 0;
 
-const action = (currentValve: Valve, lastVisited: string, openedValves: string[], totalFlowRate: number, minute: number) => {
+const actionPart1 = (currentValve: Valve, openedValves: string[], totalFlowRate: number, minute: number): number => {
     counter++;
-    console.log(counter, currentValve.id, lastVisited, openedValves, totalFlowRate, minute);
-
-    const isAlreadyOpened = openedValves.find(v => v === currentValve.id);
+    console.log(counter, " - ", currentValve.id, openedValves, totalFlowRate, minute);
     if (minute >= maxMinute) return totalFlowRate;
+
+    const computedValveScore = valveArray.map(v => {
+        if (openedValves.includes(v.id)) return {valve: v, distance: 1, score: 0};
+        const distance = 1 + valveDistances[currentValve.id][v.id];
+        return {
+            valve: v,
+            distance: distance ?? 1,
+            score: (maxMinute - (minute + distance)) * v.flowRate,
+        }
+    }).filter(v => v.score > 0)
+      .sort((a, b) => b.score - a.score);
 
     const results: number[] = [];
 
-    if (!isAlreadyOpened) results.push(action(
-        currentValve,
-        currentValve.id,
-        [...openedValves, currentValve.id],
-        totalFlowRate + currentValve.flowRate * (maxMinute - (minute + 1)),
-        minute + 1 )
-    );
-
-    currentValve.connections.forEach(c => results.push(action(
-        c.valve,
-        currentValve.id,
-        [...openedValves],
-        totalFlowRate,
-        minute + c.distance )
-    ));
-
-
-
-    return results.length > 0 ? Math.max(...results) : totalFlowRate;
-
-
-    //openedValves: string[];
-    //totalFlowRate: number
-    //minute: number
-
-    //ACTION - MOVE through all connection tunnels
-    // -> openedValves - copy
-    // -> totalFlowRate - keep
-    // -> minute - increment by DISTANCE
-
-
-    //if flow rate is greater than 0 and valve is closed
-    //ACTION - OPEN VALVE
-    // -> openedValves - copy and add valve id
-    // -> totalFlowRate - increase by (minute * flow rate)
-    // -> minute - increment by 1
+    computedValveScore.forEach(valveToOpen => results.push(actionPart1(valveToOpen.valve, [...openedValves, valveToOpen.valve.id], totalFlowRate + valveToOpen.score, minute + valveToOpen.distance)))
+    if(results.length > 0) return Math.max(...results);
+    return totalFlowRate;
 }
 
 const createValve = (id: string, flowRate: number): Valve => ({id, flowRate, connections: []})
@@ -87,7 +64,6 @@ exports.solution = (input: string[]) => {
         console.log(k, valveRecord[k].connections);
     });
 
-    //TODO: dont remove first point
     valveArray.forEach(v => {
        if (v.flowRate === 0 && v.id !== 'AA') {
            console.log("Found valve with flow 0: ", v.id);
@@ -115,14 +91,36 @@ exports.solution = (input: string[]) => {
     });
 
 
-
-    console.log(valveRecord);
-    console.log("------------");
-
     const startingValve: Valve = valveRecord['AA'];
 
-    // console.log()
+    valveArray = valveArray.filter(v => v.flowRate > 0 || v.id === startingValve.id);
 
-    const result = action(startingValve, startingValve.id, [startingValve.id], 0, 0);
-    console.log("Result: ", result);
+    valveArray.forEach(v1 => {
+        valveDistances[v1.id] = {};
+        valveArray.forEach(v2 => valveDistances[v1.id][v2.id] = v1.id !== v2.id ? Infinity : 0)
+    });
+    valveArray.forEach(v => {
+        const stack: Valve[] = [];
+        v.connections.forEach(c => {
+            valveDistances[v.id][c.valve.id] = c.distance;
+            stack.push(c.valve);
+        });
+        while(stack.length > 0) {
+            const newValve = stack.pop();
+            if (newValve) {
+                newValve.connections.forEach(c => {
+                    const distance = valveDistances[v.id][newValve.id] + c.distance;
+                    if (distance < valveDistances[v.id][c.valve.id]) {
+                        valveDistances[v.id][c.valve.id] = distance
+                        stack.push(c.valve);
+                    }
+                });
+            }
+        }
+    });
+
+    console.log(valveDistances);
+
+    const result = actionPart1(startingValve,  [startingValve.id], 0, 0);
+    console.log("Result part 1: ", result);
 }
