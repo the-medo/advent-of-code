@@ -1,9 +1,15 @@
-type ShapeCoord = {
+type ShapePoints = {
     x: number,
     y: number,
 }
 
-type Shape = ShapeCoord[];
+type Shape = ShapePoints[];
+
+type IterationStat = {
+    rounds: number,
+    height: number,
+    rocks: number,
+};
 
 const shapes: Shape[] = [
     // ####
@@ -53,17 +59,6 @@ const shapes: Shape[] = [
     ],
 ];
 
-const tower: boolean[][] = [];
-
-let numberOfRocks = 0;
-let height = 0;
-const chamberWidth = 7;
-
-const currentPosition: ShapeCoord = {
-    x: 2,
-    y: 3
-}
-
 const moveToSide = (side: '<' | '>'): boolean => {
     const xModifier = side === '<' ? -1 : 1;
 
@@ -93,7 +88,6 @@ const moveToSide = (side: '<' | '>'): boolean => {
 }
 
 const moveToBottom = (): boolean => {
-
     if (currentPosition.y === 0) return glueToTower();
 
     let canMove = true;
@@ -134,12 +128,14 @@ const glueToTower = () => {
     return false;
 }
 
-const createRockShape = () => {
+const createRockShape = (): boolean => {
+    //before actually creating new rock, we check for pattern (if pattern is found, no need to continue with creating rocks)
+    if (patternInfo === undefined && checkForPattern()) return true;
+
     numberOfRocks++;
     currentPosition.x = 2;
     currentPosition.y = height + 3;
-
-    console.log("Created rock shape: ", numberOfRocks, currentPosition.x, currentPosition.y);
+    return false;
 }
 
 const getRockShape = () => shapes[(numberOfRocks - 1) % shapes.length]
@@ -152,24 +148,143 @@ const drawTower = () => {
     }
 }
 
+const checkForPattern = (): boolean => {
+    if (height === 0) return false;
+    const step = directions.length;
+
+    //we will save stats for all rocks, will be used later after patter is found
+    iterationStats[numberOfRocks] = {
+        height,
+        rocks: numberOfRocks,
+        rounds,
+    };
+
+    //we want to check for pattern only in case the cycle of stones ended = in cycles of 5
+    if (numberOfRocks % shapes.length === 0) {
+        const iterationNumber = numberOfRocks;
+
+        for (let i = 1; i < iterationNumber / (shapes.length * 2); i++) {
+            const baseI = iterationNumber;
+            const stepOneI = baseI - (i * shapes.length);
+            const stepTwoI = baseI - (i * shapes.length * 2);
+
+            //difference in rounds needs to be size of the "gas flow" cycle (and of course it also needs to be the same)
+            const diff_rounds1 = iterationStats[baseI].rounds - iterationStats[stepOneI].rounds;
+            const diff_rounds2 = iterationStats[stepOneI].rounds - iterationStats[stepTwoI].rounds;
+            if (diff_rounds1 % step === 0 && diff_rounds1 === diff_rounds2) {
+
+                //rock count difference should always be the same - just to be sure
+                const diff_rocks1 = iterationStats[baseI].rocks - iterationStats[stepOneI].rocks;
+                const diff_rocks2 = iterationStats[stepOneI].rocks - iterationStats[stepTwoI].rocks;
+                if (diff_rocks1 === diff_rocks2) {
+
+                    //height difference needs to be the same
+                    const diff_height1 = iterationStats[baseI].height - iterationStats[stepOneI].height;
+                    const diff_height2 = iterationStats[stepOneI].height - iterationStats[stepTwoI].height;
+                    if (diff_height1 === diff_height2) {
+
+                        patternInfo = {
+                            rocks: diff_rocks1,
+                            height: diff_height1,
+                            rounds: diff_rounds1,
+                        }
+
+                        prePatternStats = {...iterationStats[stepTwoI]};
+
+                        console.log("PATTERN FOUND!");
+                        console.log("====================");
+                        console.log(baseI, stepOneI, stepTwoI);
+                        console.log(iterationStats[baseI]);
+                        console.log(iterationStats[stepOneI]);
+                        console.log(iterationStats[stepTwoI]);
+
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+
+
+const tower: boolean[][] = [];
+
+let numberOfRocks = 0;
+let height = 0;
+let rounds = 0;
+let directions = '';
+const chamberWidth = 7;
+let iterationStats: Record<number, IterationStat> = {};
+
+let patternInfo: IterationStat;
+let prePatternStats: IterationStat;
+
+const currentPosition: ShapePoints = {
+    x: 2,
+    y: 3
+}
+
 exports.solution = (input: string[]) => {
 
-    let rounds = 0;
-    const directions = input[0];
-    console.log(directions);
+    directions = input[0];
+
+    const elephantCondition: number = 1_000_000_000_000;
+    // const elephantCondition: number = 2022;
 
     createRockShape();
-    while (numberOfRocks <= 2022 ) {
+    while (numberOfRocks <= elephantCondition ) {
         rounds++;
         const direction = directions[(rounds - 1) % directions.length ] as "<" | ">";
         moveToSide(direction);
         if (!moveToBottom()) {
-            createRockShape();
+            if (createRockShape()) {
+                console.log("======================");
+                const repeatPatternCount = Math.floor((elephantCondition - numberOfRocks) / patternInfo.rocks);
+                console.log("Pattern needs to be repeated", repeatPatternCount, "times");
+
+                console.log("Number of rocks: ", numberOfRocks, " + ", (repeatPatternCount * patternInfo.rocks));
+                numberOfRocks += (repeatPatternCount * patternInfo.rocks);
+                console.log("  == ", numberOfRocks);
+
+                console.log("Number of rounds: ", rounds, " + ", (repeatPatternCount * patternInfo.rounds));
+                rounds += (repeatPatternCount * patternInfo.rounds);
+                console.log("  == ", rounds);
+
+                console.log("Height: ", height, " + ", (repeatPatternCount * patternInfo.height));
+                height += (repeatPatternCount * patternInfo.height);
+                console.log("  == ", height);
+
+                const rocksLeft = (elephantCondition - numberOfRocks);
+
+                console.log("======================");
+                console.log("Rocks left to fill: ", rocksLeft);
+
+                if (rocksLeft > 0) {
+                    numberOfRocks += iterationStats[prePatternStats.rocks + rocksLeft].rocks - prePatternStats.rocks;
+                    rounds += iterationStats[prePatternStats.rocks + rocksLeft].rounds - prePatternStats.rounds;
+                    height += iterationStats[prePatternStats.rocks + rocksLeft].height - prePatternStats.height;
+                }
+                break;
+            }
         }
     }
 
-    // drawTower();
-
-    console.log("Rounds: ", rounds);
-    console.log("Height: ", height);
+    console.log("======================");
+    console.log("Elephant condition: ", elephantCondition);
+    if (prePatternStats !== undefined) {
+        console.log("Stats before pattern started: ");
+        console.log("  == rock count before pattern started: ", prePatternStats.rocks);
+        console.log("  == height before pattern started: ", prePatternStats.height);
+        console.log("  == rounds before pattern started: ", prePatternStats.rounds);
+        console.log("Found pattern: ");
+        console.log("  == rocks increase by ", patternInfo.rocks);
+        console.log("  == height increases by ", patternInfo.height);
+        console.log("  == increase occurs every ", patternInfo.rounds, "rounds");
+    }
+    console.log("======================");
+    console.log("RESULT ");
+    console.log("  == rounds: ", rounds);
+    console.log("  == height: ", height);
 }
