@@ -135,7 +135,7 @@ exports.solution = (input: string[]) => {
     console.log(valveDistances);
 
     const result1 = action(
-        [{id: 1, currentValve: startingValve, minutes: 4}, {id: 2, currentValve: startingValve, minutes: 4}],
+        [{id: 1, currentValve: startingValve, minutes: 0}],
         [startingValve.id],
         0
     );
