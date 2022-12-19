@@ -1,6 +1,7 @@
 import {enumKeys} from "../utils/enumKeys";
+const clone = require('lodash/cloneDeep.js');
 
-enum Ore {
+enum Resource {
   ORE,
   CLAY,
   OBSIDIAN,
@@ -8,22 +9,22 @@ enum Ore {
 }
 
 type Robot = {
-  type: Ore,
+  type: Resource,
   cost: {
-    ore: Ore,
+    ore: Resource,
     count: number,
   }[]
 }
 
 type Inventory = {
-  robots: Record<Ore, number>,
-  ores: Record<Ore, number>,
+  robots: Record<Resource, number>,
+  ores: Record<Resource, number>,
 }
 
 type Blueprint = {
   id: number,
   geodes: number,
-  robot: Record<Ore, Robot>,
+  robot: Record<Resource, Robot>,
 }
 
 type RobotRound = {
@@ -32,8 +33,8 @@ type RobotRound = {
   inventory: Inventory,
 }
 
-type OreCount = Record<Ore, number>;
-type BuildQueue = OreCount;
+type ResourceCount = Record<Resource, number>;
+type BuildQueue = ResourceCount;
 
 let b: Blueprint[] = [];
 let roundCountTotal = 0;
@@ -43,24 +44,24 @@ let roundCache: Record<string, boolean> = {};
 
 const initInventory = () => ({
   robots: {
-    [Ore.ORE]: 1,
-    [Ore.CLAY]: 0,
-    [Ore.OBSIDIAN]: 0,
-    [Ore.GEODE]: 0,
+    [Resource.ORE]: 1,
+    [Resource.CLAY]: 0,
+    [Resource.OBSIDIAN]: 0,
+    [Resource.GEODE]: 0,
   },
   ores: {
-    [Ore.ORE]: 0,
-    [Ore.CLAY]: 0,
-    [Ore.OBSIDIAN]: 0,
-    [Ore.GEODE]: 0,
+    [Resource.ORE]: 0,
+    [Resource.CLAY]: 0,
+    [Resource.OBSIDIAN]: 0,
+    [Resource.GEODE]: 0,
   },
 });
 
-const initOreCountObject = (): BuildQueue => ({
-  [Ore.ORE]: 0,
-  [Ore.CLAY]: 0,
-  [Ore.OBSIDIAN]: 0,
-  [Ore.GEODE]: 0,
+const initOreCountObject = (initValue: number = 0): BuildQueue => ({
+  [Resource.ORE]: initValue,
+  [Resource.CLAY]: initValue,
+  [Resource.OBSIDIAN]: initValue,
+  [Resource.GEODE]: initValue,
 })
 
 const parseBlueprints = (input: string[]) => {
@@ -80,30 +81,30 @@ const parseBlueprints = (input: string[]) => {
       id: bId,
       geodes: 0,
       robot: {
-        [Ore.ORE]: {
-          type: Ore.ORE,
+        [Resource.ORE]: {
+          type: Resource.ORE,
           cost: [
-            {ore: Ore.ORE, count: oreRobotOreCost}
+            {ore: Resource.ORE, count: oreRobotOreCost}
           ]
         },
-        [Ore.CLAY]: {
-          type: Ore.CLAY,
+        [Resource.CLAY]: {
+          type: Resource.CLAY,
           cost: [
-            {ore: Ore.ORE, count: clayRobotOreCost}
+            {ore: Resource.ORE, count: clayRobotOreCost}
           ]
         },
-        [Ore.OBSIDIAN]: {
-          type: Ore.OBSIDIAN,
+        [Resource.OBSIDIAN]: {
+          type: Resource.OBSIDIAN,
           cost: [
-            {ore: Ore.ORE, count: obsidianRobotOreCost},
-            {ore: Ore.CLAY, count: obsidianRobotClayCost},
+            {ore: Resource.ORE, count: obsidianRobotOreCost},
+            {ore: Resource.CLAY, count: obsidianRobotClayCost},
           ]
         },
-        [Ore.GEODE]: {
-          type: Ore.GEODE,
+        [Resource.GEODE]: {
+          type: Resource.GEODE,
           cost: [
-            {ore: Ore.ORE, count: geodeRobotOreCost},
-            {ore: Ore.OBSIDIAN, count: geodeRobotObsidianCost}
+            {ore: Resource.ORE, count: geodeRobotOreCost},
+            {ore: Resource.OBSIDIAN, count: geodeRobotObsidianCost}
           ]
         }
       }
@@ -111,45 +112,78 @@ const parseBlueprints = (input: string[]) => {
   });
 }
 
-const clone = require('lodash/cloneDeep.js');
 
-const logNiceOres = (ores: OreCount) => `Ore: ${ores[Ore.ORE]} | Clay: ${ores[Ore.CLAY]} | Obsidian: ${ores[Ore.OBSIDIAN]} | GEODE: ${ores[Ore.GEODE]} `
+const logNiceOres = (ores: ResourceCount) => `Ore: ${ores[Resource.ORE]} | Clay: ${ores[Resource.CLAY]} | Obsidian: ${ores[Resource.OBSIDIAN]} | GEODE: ${ores[Resource.GEODE]} `
 
-const cacheRobotRoundKey = (r: RobotRound) => `${r.minute}x${r.maxGeodeCount}x${r.inventory.robots[Ore.ORE]}x${r.inventory.robots[Ore.CLAY]}x${r.inventory.robots[Ore.OBSIDIAN]}x${r.inventory.robots[Ore.GEODE]}x${r.inventory.ores[Ore.ORE]}x${r.inventory.ores[Ore.CLAY]}x${r.inventory.ores[Ore.OBSIDIAN]}x${r.inventory.ores[Ore.GEODE]}`;
+const cacheKeyPartFromOreCount = (r: ResourceCount) => `${r[Resource.ORE]}x${r[Resource.CLAY]}x${r[Resource.OBSIDIAN]}x${r[Resource.GEODE]}`;
 
-const minutesToBuildQueue = (b: Blueprint, q: BuildQueue, i: Inventory): number => {
+const cacheRobotRoundKey = (r: RobotRound) => `${r.minute}x${r.maxGeodeCount}x${r.inventory.robots[Resource.ORE]}x${r.inventory.robots[Resource.CLAY]}x${r.inventory.robots[Resource.OBSIDIAN]}x${r.inventory.robots[Resource.GEODE]}x${r.inventory.ores[Resource.ORE]}x${r.inventory.ores[Resource.CLAY]}x${r.inventory.ores[Resource.OBSIDIAN]}x${r.inventory.ores[Resource.GEODE]}`;
+
+const minutesToBuildQueue = (b: Blueprint, robotType: Resource, i: Inventory): number => {
   const totalCost = initOreCountObject();
   let maxMinutes = 0;
 
-  enumKeys(Ore).forEach(o => {
-    b.robot[Ore[o]].cost.forEach(oc => {
-      totalCost[oc.ore] += (q[Ore[o]] * oc.count);
-      const minutes = Math.ceil((totalCost[oc.ore] - i.ores[oc.ore]) / i.robots[oc.ore] );
-      if (minutes > maxMinutes) maxMinutes = minutes;
-    })
-  });
+  b.robot[robotType].cost.forEach(oc => {
+    totalCost[oc.ore] += oc.count;
+    const minutes = Math.ceil((totalCost[oc.ore] - i.ores[oc.ore]) / i.robots[oc.ore] );
+    if (minutes > maxMinutes) maxMinutes = minutes;
+  })
 
   return maxMinutes + 1;
 }
 
-const runMinutesAndBuild = (b: Blueprint, m: number, q: BuildQueue, i: Inventory): Inventory => {
+const runMinutesAndBuild = (b: Blueprint, m: number, robotType: Resource, i: Inventory): Inventory => {
   const newI = clone(i);
 
   //increase resources by "m" minutes
-  enumKeys(Ore).forEach(o => {
-    newI.ores[Ore[o]] += (m * newI.robots[Ore[o]]);
+  enumKeys(Resource).forEach(o => {
+    newI.ores[Resource[o]] += (m * newI.robots[Resource[o]]);
   });
 
-  enumKeys(Ore).forEach(o => {
-    if (q[Ore[o]] > 0) {
-      b.robot[Ore[o]].cost.forEach(oc => {
-        newI.ores[oc.ore] -= (oc.count * q[Ore[o]]); //decrease resources for robots in queue
-      });
-      newI.robots[Ore[o]] +=  q[Ore[o]]; //increase robot count for robots in queue
-    }
+  b.robot[robotType].cost.forEach(oc => {
+    newI.ores[oc.ore] -= oc.count ; //decrease resources for robot
   });
+  newI.robots[robotType]++; //increase robot count
 
   return newI;
+}
+
+let maximumResourcesNeeded: ResourceCount = initOreCountObject();
+let shouldQueueRobotCache: Record<string, ResourceCount> = {};
+
+const computeMaximumResourcesNeededFromBlueprint = (b: Blueprint) => {
+  const max = initOreCountObject();
+  enumKeys(Resource).forEach(o => b.robot[Resource[o]].cost.forEach(oc => {if (max[oc.ore] < oc.count) max[oc.ore] = oc.count}));
+  maximumResourcesNeeded = max;
+}
+
+
+
+const shouldQueueRobot = (inventory: Inventory): ResourceCount => {
+  const cacheKey = cacheKeyPartFromOreCount(inventory.ores);
+
+  let result = shouldQueueRobotCache[cacheKey];
+
+  if (result === undefined) {
+    result = initOreCountObject(1);
+
+    //in case we have already enough of robots to make everything, we don't need to build it (except GEODE, of course)
+    enumKeys(Resource).forEach(o => { if (inventory.robots[Resource[o]] >= maximumResourcesNeeded[Resource[o]] && Resource[o] !== Resource.GEODE) result[Resource[o]] = 0;});
+
+    //in case we dont have CLAY robot, we can't build OBSIDIAN robot
+    if (inventory.robots[Resource.CLAY] === 0) result[Resource.OBSIDIAN] = 0;
+
+    //in case we dont have OBSIDIAN robot, we can't build GEODE robot
+    if (inventory.robots[Resource.OBSIDIAN] === 0) result[Resource.GEODE] = 0;
+
+    //my very rude assumption, that we don't need ORE and CLAY robots when we already have 2 obsidian robots
+    if (inventory.robots[Resource.OBSIDIAN] > 2) {
+      result[Resource.ORE] = 0;
+      result[Resource.CLAY] = 0;
+    }
+  }
+
+  return result;
 }
 
 const runRound = ({minute, maxGeodeCount, inventory}: RobotRound, b: Blueprint): RobotRound[] => {
@@ -158,17 +192,10 @@ const runRound = ({minute, maxGeodeCount, inventory}: RobotRound, b: Blueprint):
 
   if (newMin > maxMinuteCount) return [];
 
+  const baseRobotQueue: Resource[] = [];
 
-  const baseRobotQueue: BuildQueue[] = [];
-
-  baseRobotQueue.push({...initOreCountObject(), [Ore.ORE]: 1})
-  baseRobotQueue.push({...initOreCountObject(), [Ore.CLAY]: 1})
-  if (inventory.robots[Ore.CLAY] > 0) {
-    baseRobotQueue.push({...initOreCountObject(), [Ore.OBSIDIAN]: 1})
-    if (inventory.robots[Ore.OBSIDIAN] > 0) {
-      baseRobotQueue.push({...initOreCountObject(), [Ore.GEODE]: 1})
-    }
-  }
+  const robotsToQueue = shouldQueueRobot(inventory);
+  enumKeys(Resource).forEach(o => {if (robotsToQueue[Resource[o]] === 1) baseRobotQueue.push(Resource[o]); });
 
   const resultRobotRounds: RobotRound[] = [];
 
@@ -178,7 +205,7 @@ const runRound = ({minute, maxGeodeCount, inventory}: RobotRound, b: Blueprint):
       const newInventory = runMinutesAndBuild(b, minutesToBuild, rq, inventory);
       const robotRound: RobotRound = {
         minute: minute + minutesToBuild,
-        maxGeodeCount: newInventory.ores[Ore.GEODE],
+        maxGeodeCount: newInventory.ores[Resource.GEODE],
         inventory: newInventory,
       };
       const cacheKey = cacheRobotRoundKey(robotRound);
@@ -202,8 +229,11 @@ type RobotRoundListNode = {
   next?: RobotRoundListNode,
 }
 
-const runBlueprint = (b: Blueprint) => {
+const runBlueprint = (b: Blueprint, minutes: number) => {
   console.log("==== BLUEPRINT STARTED ==== ", b.id);
+  const start = Date.now();
+
+  computeMaximumResourcesNeededFromBlueprint(b);
   const baseRoundNode: RobotRoundListNode = {
     next: undefined,
     round: {
@@ -213,8 +243,6 @@ const runBlueprint = (b: Blueprint) => {
     }
   };
 
-  const start = Date.now();
-
   const roundLinkedList: RobotRoundList = {
     head: baseRoundNode,
     tail: baseRoundNode,
@@ -222,19 +250,16 @@ const runBlueprint = (b: Blueprint) => {
 
   let maxGeodeCount = 0;
   roundCountTotal = 0;
-  maxMinuteCount = 24;
   roundCache = {};
+  shouldQueueRobotCache = {};
+  maxMinuteCount = minutes;
 
   while (roundLinkedList.head) {
     const round = roundLinkedList.head.round;
-    // console.log("================= MINUTE: ", round.minute);
-    // console.log("==ROBOTS: ", logNiceOres(round.inventory.robots));
-    // console.log("==ORES:   ", logNiceOres(round.inventory.ores));
-    // console.log("===========================================");
 
-    if (round.inventory.robots[Ore.GEODE] > 0) {
+    if (round.inventory.robots[Resource.GEODE] > 0) {
       const minDiff = maxMinuteCount - round.minute;
-      const geodesInTheEnd = round.maxGeodeCount + minDiff * round.inventory.robots[Ore.GEODE];
+      const geodesInTheEnd = round.maxGeodeCount + minDiff * round.inventory.robots[Resource.GEODE];
       if (geodesInTheEnd > maxGeodeCount) {
         maxGeodeCount = geodesInTheEnd;
       }
@@ -264,10 +289,18 @@ exports.solution = (input: string[]) => {
 
   let qualityLevel = 0;
 
+  // PART ONE:
   b.forEach(blueprint => {
-    runBlueprint(blueprint);
+    runBlueprint(blueprint, 24);
     qualityLevel += (blueprint.id * blueprint.geodes);
   });
+  console.log("========= RESULT PART ONE: ", qualityLevel);
 
-  console.log("RESULT ========= ", qualityLevel);
+  // PART TWO:
+  qualityLevel = 1;
+  b.filter((b, i) => i <= 2).forEach(blueprint => {
+    runBlueprint(blueprint, 32);
+    qualityLevel *= blueprint.geodes;
+  });
+  console.log("========= RESULT PART TWO: ", qualityLevel);
 }
