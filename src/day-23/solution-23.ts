@@ -91,7 +91,7 @@ const getProposed = (x: number, y: number, d: number): Coordinates | undefined =
 
 const doRound = (): boolean => {
     round++;
-    console.log(`=============== ROUND ${round}`);
+    // console.log(`=============== ROUND ${round}`);
     proposeMovements();
     if (isMovementProposed()) {
         doMovements();
@@ -103,8 +103,6 @@ const doRound = (): boolean => {
 
 const proposeMovements = () => {
     const dir = (round - 1) % elfDirections.length;
-    console.log(`DIR ${dir}`);
-
     elvesArray.forEach((e) => {
         e.proposed = getProposed(e.x, e.y, dir);
         if (e.proposed) elvesWithSeedlings[intToElfCoord(e.proposed.x)][intToElfCoord(e.proposed.y)].isProposed++;
@@ -143,7 +141,7 @@ const doMovements = () => {
     });
 }
 
-const getResult = () => {
+const getResult = (draw: boolean) => {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     elvesArray.forEach(e => {
         if (e.x > maxX) maxX = e.x;
@@ -152,25 +150,24 @@ const getResult = () => {
         if (e.y < minY) minY = e.y;
     });
 
-    drawMap(minX, maxX, minY, maxY);
+    if (draw) {
+        drawMap(minX, maxX, minY, maxY);
+    }
 
     const area = (maxX - minX + 1) * (maxY - minY + 1);
 
     console.log(`MinX: ${minX} MaxX: ${maxX} MinY: ${minY} MaxY: ${maxY}  `);
-    console.log(`Area: ${area}`);
-    console.log(`Result: ${area - elvesArray.length}`);
+    console.log(`Total area: ${area}`);
+    console.log(`Free spaces: ${area - elvesArray.length}`);
+    console.log(`Rounds: ${round}`);
 }
 
-const run = (roundCount: number) => {
+const run = (roundCount: number, draw: boolean) => {
     let didSomething = true;
     while (didSomething && (roundCount === 0 || (roundCount > 0 && round < roundCount) )) {
-
         didSomething = doRound();
-        console.log(`Did something: ${didSomething}`);
     }
-    // console.log(elvesArray);
-    // console.log(elvesWithSeedlings);
-    getResult();
+    getResult(draw);
 }
 
 const parseElves = (input: string[]) => {
@@ -199,6 +196,12 @@ const parseElves = (input: string[]) => {
 }
 
 exports.solution = (input: string[]) => {
+    parseElves(input)
+    console.log("============= PART 1 =============");
+    run(10, false);
+
+    console.log("============= PART 2 =============");
     parseElves(input);
-    run(10);
+    run(0, false);
+
 }
