@@ -1,5 +1,4 @@
 import {Coordinates} from "../utils/coords";
-import {isBooleanObject} from "util/types";
 
 type ElfWithSeedling = {
     x: number,
@@ -61,7 +60,6 @@ const getProposed = (x: number, y: number, d: number): Coordinates | undefined =
         }
         if (isElfAround) break;
     }
-    // console.log(`Checking ${x};${y} => Elf around: ${isElfAround}`);
 
     //if there is elf around, we need to propose new position
     if (isElfAround) {
@@ -72,9 +70,7 @@ const getProposed = (x: number, y: number, d: number): Coordinates | undefined =
             elfDirections[dir].forEach(ed => {
                 const elfField = checkField(ed.x + x, ed.y + y);
                 if (elfField.isElf) canMoveToDir = false;
-                // console.log(`=====> Elf field: ${ed.x + x};${ed.y + y} isElf: ${elfField.isElf}, isProposed: ${elfField.isProposed}`);
             });
-            // console.log(`===> dir: ${dir}; ${canMoveToDir}`);
             if (canMoveToDir) {
                 proposed = {
                     x: x + elfDirections[dir][1].x,
@@ -84,20 +80,17 @@ const getProposed = (x: number, y: number, d: number): Coordinates | undefined =
             }
         }
     }
-    // console.log(`=== proposed ${proposed?.x};${proposed?.y}`)
 
     return proposed;
 }
 
 const doRound = (): boolean => {
     round++;
-    // console.log(`=============== ROUND ${round}`);
     proposeMovements();
     if (isMovementProposed()) {
         doMovements();
         return true;
     }
-    //console.log("doRound - returning false");
     return false;
 }
 
