@@ -1,11 +1,8 @@
 import {Coordinates} from "../utils/coords";
 
 type ElfWithSeedling = {
-    x: number,
-    y: number,
-    lastDirection: number,
     proposed?: Coordinates,
-}
+} & Coordinates;
 
 type ElfField = {
     isElf: boolean,
@@ -20,7 +17,6 @@ const elfDirections = [
 ]
 
 const intToElfCoord = (i: number) => (i >= 0) ? `p${i}` : `m${Math.abs(i)}`;
-const elfCoordToInt = (i: string) => i[0] === 'm' ? -parseInt(i) : parseInt(i);
 
 let elvesWithSeedlings: Record<string, Record<string, ElfField>> = {};
 let elvesArray: ElfWithSeedling[] = [];
@@ -181,7 +177,6 @@ const parseElves = (input: string[]) => {
                 elvesArray.push({
                     x: colId,
                     y: rowId,
-                    lastDirection: 0,
                 });
             }
         });
