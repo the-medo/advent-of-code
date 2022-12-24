@@ -25,7 +25,7 @@ let width: number = 0;
 let start: Coordinates = { x: 1, y: 0,}
 let finish: Coordinates = { x: 0, y: 0,}
 let shortestPath: number = Infinity;
-let stack: {
+let queue: {
     min: number,
     x: number,
     y: number,
@@ -69,14 +69,14 @@ const stackMoves = (min: number, x: number, y: number) => {
     if (min >= shortestPath) return;
     if (min + pointDistanceToFinish({x, y}) > shortestPath) return;
 
-
     const nextValleyMinute = (min + 1) % (width * height);
-    if (x > 0 && canStackPoint(valleyMap[nextValleyMinute][x][y])) stack.push({min: min + 1, x, y});
-    if (x - 1 > 0 && y > 0 && y < height + 1 && canStackPoint(valleyMap[nextValleyMinute][x - 1][y])) stack.push({min: min + 1, x: x - 1, y});
-    if (y - 1 > 0 && x > 0 && x < width + 1 && canStackPoint(valleyMap[nextValleyMinute][x][y - 1])) stack.push({min: min + 1, x, y: y - 1});
-    if (x + 1 < width + 1 && y > 0 && y < height + 1 && canStackPoint(valleyMap[nextValleyMinute][x + 1][y])) stack.push({min: min + 1, x: x + 1, y});
-    if (y + 1 < height + 1 && x > 0 && x < width + 1 && canStackPoint(valleyMap[nextValleyMinute][x][y + 1])) stack.push({min: min + 1, x, y: y + 1});
-    if (y + 1 === height + 1 && x === width) stack.push({min: min + 1, x, y: y + 1});
+    if (x > 0 && canStackPoint(valleyMap[nextValleyMinute][x][y])) queue.push({min: min + 1, x, y});
+    if (x - 1 > 0 && y > 0 && y < height + 1 && canStackPoint(valleyMap[nextValleyMinute][x - 1][y])) queue.push({min: min + 1, x: x - 1, y});
+    if (y - 1 > 0 && x > 0 && x < width + 1 && canStackPoint(valleyMap[nextValleyMinute][x][y - 1])) queue.push({min: min + 1, x, y: y - 1});
+    if (x + 1 < width + 1 && y > 0 && y < height + 1 && canStackPoint(valleyMap[nextValleyMinute][x + 1][y])) queue.push({min: min + 1, x: x + 1, y});
+    if (y + 1 < height + 1 && x > 0 && x < width + 1 && canStackPoint(valleyMap[nextValleyMinute][x][y + 1])) queue.push({min: min + 1, x, y: y + 1});
+    if (y + 1 === height + 1 && x === width && y + 1 === finish.y && x === finish.x) queue.push({min: min + 1, x, y: y + 1});
+    else if (y - 1 === 0 && x === 1 && y - 1 === finish.y && x === finish.x) queue.push({min: min + 1, x, y: y - 1});
 }
 
 const canStackPoint = (point: BLIZZARD[] | undefined) => {
@@ -116,12 +116,7 @@ const parseValley = (input: string[]) => {
     round = 0;
     height = input.length - 2;
     width = input[0].length - 2;
-    finish = {
-        x: width,
-        y: height + 1,
-    }
-    shortestPath = 500;
-    stack = [{
+    queue = [{
         min: 0,
         x: start.x,
         y: start.y,
@@ -143,22 +138,31 @@ const parseValley = (input: string[]) => {
     });
 }
 
-const run = () => {
-    while (stack.length > 0) {
-        const point = stack.pop();
+const run = (s: Coordinates, f: Coordinates, shortestBefore: number,) => {
+    start = s;
+    finish = f;
+    shortestPath = Infinity;
+
+    positionCache = {};
+    queue = [];
+    queue.push({min: shortestBefore, x: s.x, y: s.y});
+
+    while (queue.length > 0) {
+        const point = queue.shift();
         if (point) stackMoves(point.min, point.x, point.y);
     }
+
+    console.log("Shortest time: ", shortestPath);
 }
 
 exports.solution = (input: string[]) => {
 
     parseValley(input);
     fillValleyRound(1);
-
-    run();
     console.log(valleyMap.length);
     console.log(width, 'x', height);
-    console.log("Shortest time: ", shortestPath);
 
-
+    run({ x: 1, y: 0}, { x: width, y: height + 1}, 0);
+    run({ x: width, y: height + 1}, { x: 1, y: 0}, shortestPath);
+    run({ x: 1, y: 0}, { x: width, y: height + 1}, shortestPath);
 }
