@@ -21,7 +21,7 @@ npm-debug.log
 yarn-error.log
 testem.log
 /typings
-.env*
+.env
 
 # System Files
 .DS_Store
@@ -29,3 +29,4 @@ Thumbs.db
 
 # input files
 /src/*/day-*/input-*.txt
+/src/*/day-*/test-*.txt

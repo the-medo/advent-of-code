@@ -1,16 +1,30 @@
 import getInput from "./src/utils/getInput";
+import {downloadInput} from "./di";
 
-if (process.argv[2] !== undefined) {
+(async () => {
+    let day = new Date().getDate();
     let year = new Date().getFullYear();
-    if (process.argv[3] !== undefined) {
-        year = parseInt(process.argv[3]);
+    let testing = false;
+
+    if (process.argv[2] !== undefined) {
+        if (process.argv[2] === 't') {
+            testing = true;
+        } else if (process.argv[2] === 'd') {
+            await downloadInput(day, year);
+        } else {
+            day = parseInt(process.argv[2]);
+
+            if (process.argv[3] !== undefined) {
+                year = parseInt(process.argv[3]);
+
+                if (process.argv[4] === "t") {
+                    testing = true;
+                } else if (process.argv[4] === 'd') {
+                    await downloadInput(day, year);
+                }
+            }
+        }
     }
-
-    const solutionId: number = parseInt(process.argv[2]);
-    require(`./src/${year}/day-${solutionId}/solution-${solutionId}.ts`).solution(getInput(solutionId, year));
-} else {
-    throw Error("Please insert Day as first parameter");
-}
-
-
+    require(`./src/${year}/day-${day}/solution-${day}.ts`).solution(getInput(day, year, testing));
+})();
 
