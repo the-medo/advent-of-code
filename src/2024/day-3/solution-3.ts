@@ -1,72 +1,26 @@
 exports.solution = (input: string[]) => {
-    let line = input.join('');
-    const splitline = line.split('');
+    // ================ Regex solution... previous one was without regex,
 
-    // let regex = /mul\([0-9]+,[0-9]+\)/g
-    // const match = regex.exec(line)
+    let part1 = 0, part2 = 0;
+    const matches = input.join('').matchAll(/mul\((\d{1,3}),(\d{1,3})\)|don't\(\)|do\(\)/g);
 
-    // console.log(match)
-
-
-    let index = 0
-    let totalResult = 0;
-    let occurences = 0;
-    let enabled = true;
-
-    while (index > -1) {
-        if (enabled) {
-            index = line.search(/mul\(|don't\(\)/);
-            // console.log(index)
-
-            let pos = index + 4;
-            if (line[index] === 'd') {
-                enabled = false;
-                pos += 2;
+    let isEnabled = true;
+    for (let [fullMatch, val1, val2] of matches) {
+        console.log({fullMatch, val1, val2});
+        if (fullMatch[0] === 'm') {
+            const v = parseInt(val1) * parseInt(val2)
+            part1 += v;
+            if (isEnabled) {
+                part2 += v;
             }
-
-            splitline.splice(0, pos)
-            line = line.substring(pos)
-            if (!enabled) continue;
-
-            let valid = true;
-            const c = splitline.findIndex(c => {
-                if (c === ')' ||
-                    !(
-                        c === ')' ||
-                        (c.charCodeAt(0) >= 48 && c.charCodeAt(0) <= 57) ||
-                        c.charCodeAt(0) == 44
-                    )) {
-                    if (c !== ')') {
-                        valid = false;
-                    }
-                    return true;
-                }
-            });
-            if (c === -1) {
-                valid = false;
-            }
-
-            const result = splitline.splice(0, c)
-            if (valid) {
-                const resultNumbers = result.join('').split(',').map(Number);
-                if (resultNumbers.length === 2) {
-                    totalResult += resultNumbers[0] * resultNumbers[1];
-                    occurences++;
-                    console.log(result.join(''), '=', resultNumbers[0] * resultNumbers[1]);
-                }
-            }
-            line = line.substring(c)
         } else {
-            index = line.search(/do\(\)/);
-
-            const pos = index + 4;
-            splitline.splice(0, pos)
-            line = line.substring(pos)
-
-            enabled = true;
+            isEnabled = fullMatch === 'do()';
         }
     }
 
-    console.log("Part 2:", totalResult, "Occurences: ", occurences)
+    console.log("Part 1: ", part1);
+    console.log("Part 2: ", part2);
 
+    // ================ One-liner solution...
+    console.log([...input.join('').matchAll(/mul\((\d{1,3}),(\d{1,3})\)|don't\(\)|do\(\)/g)].map(m => [m[0], (m[1] ? Number(m[1]) * Number(m[2]) : 0)] as const).reduce((p, c) => c[1] === 0 ? {...p, e: c[0] === 'do()' ? 1 : 0} : {p1: p.p1 + c[1], p2: p.p2 + (c[1] * p.e), e: p.e }, {p1: 0, p2: 0, e: 1}));
 }
