@@ -58,10 +58,10 @@ exports.solution = (input: string[]) => {
     updateLines.forEach(u => {
         const result = checkRules(rules, u)
         if (result[0]) {
-            sumPart1 += u[Math.floor(u.length / 2)]
+            // sumPart1 += u[Math.floor(u.length / 2)]
         } else {
-            let newUpdateLine = [...u];
-            let brokenRule = [...result[1]] as [number, number] | undefined;
+            let newUpdateLine = u;
+            let brokenRule = result[1] as [number, number] | undefined;
             while (brokenRule) {
                 newUpdateLine = fixBrokenRule(brokenRule, newUpdateLine);
                 [, brokenRule] = checkRules(rules, newUpdateLine);
@@ -69,6 +69,8 @@ exports.solution = (input: string[]) => {
             sumPart2 += newUpdateLine[Math.floor(newUpdateLine.length / 2)]
         }
     })
+
+    console.log(rules);
 
     console.log("Part1: ", sumPart1)
     console.log("Part2: ", sumPart2)
