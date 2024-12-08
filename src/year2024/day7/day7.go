@@ -34,7 +34,20 @@ func (e *D7Equation) solve(position int, resultTillNow int, nextOperator string)
 	case "*":
 		return e.finish(position, resultTillNow*e.operands[position])
 	case "||":
-		newNumber, _ := strconv.Atoi(strconv.Itoa(resultTillNow) + fmt.Sprintf("%d", e.operands[position]))
+		// VERSION 3 = small integer loop => cca 23ms
+		temp := e.operands[position]
+		for temp > 0 {
+			resultTillNow *= 10
+			temp /= 10
+		}
+		newNumber := resultTillNow + e.operands[position]
+
+		// VERSION 2 = math.Log => cca 40ms
+		//newNumber := int(float64(resultTillNow)*math.Pow10(int(math.Floor(math.Log10(float64(e.operands[position]))+1)))) + e.operands[position]
+
+		// VERSION 1 = string concatenation => cca 200ms
+		//newNumber, _ := strconv.Atoi(strconv.Itoa(resultTillNow) + fmt.Sprintf("%d", e.operands[position]))
+
 		return e.finish(position, newNumber)
 	}
 	return false

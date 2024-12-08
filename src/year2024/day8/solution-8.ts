@@ -7,6 +7,8 @@ type D8AntennaMap = Record<string, D8Point[] | undefined>
 type D8AntinodeMap = Record<string, true | undefined>
 
 exports.solution = (input: string[]) => {
+    const t0 = performance.now();
+
     const antennaPoints: D8AntennaMap = {};
     let height = input.length, width = input[0].length;
 
@@ -57,4 +59,7 @@ exports.solution = (input: string[]) => {
 
     run(1);
     run(2);
+
+    const t1 = performance.now();
+    console.log(`Execution time: ${t1 - t0} milliseconds.`);
 }

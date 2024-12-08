@@ -25,9 +25,9 @@ import {downloadInput} from "./di";
             }
         }
     }
-    const t0 = performance.now();
-    require(`./src/year${year}/day${day}/solution-${day}.ts`).solution(getInput(day, year, testing));
-    const t1 = performance.now();
-    console.log(`Execution time: ${t1 - t0} milliseconds.`);
+    const solution = require(`./src/year${year}/day${day}/solution-${day}.ts`);
+    const input = getInput(day, year, testing);
+    solution.solution(input);
+
 })();
 

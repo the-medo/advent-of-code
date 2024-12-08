@@ -5,6 +5,7 @@ type D7Equation = {
 }
 
 exports.solution = (input: string[]) => {
+    const t0 = performance.now();
     let maxNums = 0;
     const lines: D7Equation[] = input.map(i => {
         const split = i.split(': ');
@@ -31,10 +32,12 @@ exports.solution = (input: string[]) => {
             } else if (nextOperator === '*') {
                 return finish(x, position, resultTillNow * x.operands[position]);
             } else if (nextOperator === '||') {
-                let arr = '';
-                for (let i = 0; i < x.operands[position].toString().length; i++) arr += '0';
-                const result = parseInt(resultTillNow.toString() + arr )  + x.operands[position];
-                return finish(x, position, result);
+                let temp = x.operands[position];
+                while (temp > 0) {
+                    resultTillNow *= 10
+                    temp = Math.floor(temp / 10)
+                }
+                return finish(x, position, resultTillNow + x.operands[position]);
             }
         }
         return false;
@@ -48,5 +51,9 @@ exports.solution = (input: string[]) => {
         }
     })
 
+
+    const t1 = performance.now();
+    console.log(`Execution time: ${t1 - t0} milliseconds.`);
     console.log("Part 2: ", sum);
+
 }

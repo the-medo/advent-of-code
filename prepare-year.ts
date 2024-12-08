@@ -20,7 +20,12 @@ if (process.argv[2] !== undefined) {
             fs.mkdir(dayDir, (err) => {
                 if (!err) {
                     fs.writeFile(`${dayDir}/solution-${i}.ts`, `exports.solution = (input: string[]) => {
+    const t0 = performance.now();
+    
     console.log("TODO: solution");
+    
+    const t1 = performance.now();
+    console.log(\`Execution time: \${t1 - t0} milliseconds.\`);
 }`, err => {
                         if (err) return console.error(err);
                     });
