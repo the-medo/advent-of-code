@@ -11,7 +11,7 @@ import (
 
 func Solve(day int, real bool) {
 	fileName := fmt.Sprintf("%s-%d.txt", getInputType(real), day)
-	filePath := path.Join("src", "year2023", fmt.Sprintf("day%d", day), fileName)
+	filePath := path.Join("src", "year2024", fmt.Sprintf("day%d", day), fileName)
 
 	inputData := utils.ReadFile(filePath)
 
