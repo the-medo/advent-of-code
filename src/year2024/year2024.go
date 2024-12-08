@@ -1,22 +1,21 @@
 package year2024
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
-	"github.com/the-medo/advent-of-code/src/year2024/day7"
 	"github.com/the-medo/advent-of-code/src/go/utils"
+	"github.com/the-medo/advent-of-code/src/year2024/day7"
 	"path"
 )
 
-func Solve(day int32, real bool) {
-	fileName := fmt.Sprintf("%s-%d.txt", getInputType(real), *day)
-	filePath := path.Join(fmt.Sprintf("day%d", *day), fileName)
+func Solve(day int, real bool) {
+	fileName := fmt.Sprintf("%s-%d.txt", getInputType(real), day)
+	filePath := path.Join("src", "year2023", fmt.Sprintf("day%d", day), fileName)
 
 	inputData := utils.ReadFile(filePath)
 
-	fmt.Printf("======= Running Day %d =========", *day)
+	fmt.Printf("======= Running Day %d =========", day)
 	fmt.Println()
 	start := time.Now()
 
@@ -34,4 +33,3 @@ func getInputType(isReal bool) string {
 	}
 	return "test"
 }
-

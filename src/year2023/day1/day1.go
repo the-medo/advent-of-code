@@ -1,6 +1,7 @@
 package day1
 
 import (
+	"github.com/the-medo/advent-of-code/src/go/utils"
 	"strings"
 )
 

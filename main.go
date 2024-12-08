@@ -14,8 +14,8 @@ func main() {
 
 	switch *year {
 	case 2023:
-		year2023.Solve(day, realInput)
+		year2023.Solve(*day, *realInput)
 	case 2024:
-		year2024.Solve(day, realInput)
+		year2024.Solve(*day, *realInput)
 	}
 }

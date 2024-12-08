@@ -1,10 +1,10 @@
 package year2023
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
+	"github.com/the-medo/advent-of-code/src/go/utils"
 	"github.com/the-medo/advent-of-code/src/year2023/day1"
 	"github.com/the-medo/advent-of-code/src/year2023/day10"
 	"github.com/the-medo/advent-of-code/src/year2023/day11"
@@ -12,6 +12,7 @@ import (
 	"github.com/the-medo/advent-of-code/src/year2023/day13"
 	"github.com/the-medo/advent-of-code/src/year2023/day14"
 	"github.com/the-medo/advent-of-code/src/year2023/day15"
+	"github.com/the-medo/advent-of-code/src/year2023/day16"
 	"github.com/the-medo/advent-of-code/src/year2023/day17"
 	"github.com/the-medo/advent-of-code/src/year2023/day18"
 	"github.com/the-medo/advent-of-code/src/year2023/day19"
@@ -29,17 +30,16 @@ import (
 	"github.com/the-medo/advent-of-code/src/year2023/day7"
 	"github.com/the-medo/advent-of-code/src/year2023/day8"
 	"github.com/the-medo/advent-of-code/src/year2023/day9"
-	"github.com/the-medo/advent-of-code/src/go/utils"
 	"path"
 )
 
-func Solve(day int32, real bool) {
-	fileName := fmt.Sprintf("%s-%d.txt", getInputType(real), *day)
-	filePath := path.Join(fmt.Sprintf("day%d", *day), fileName)
+func Solve(day int, real bool) {
+	fileName := fmt.Sprintf("%s-%d.txt", getInputType(real), day)
+	filePath := path.Join("src", "year2023", fmt.Sprintf("day%d", day), fileName)
 
 	inputData := utils.ReadFile(filePath)
 
-	fmt.Printf("======= Running Day %d =========", *day)
+	fmt.Printf("======= Running Day %d =========", day)
 	fmt.Println()
 	start := time.Now()
 
