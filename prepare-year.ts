@@ -7,7 +7,7 @@ if (process.argv[2] !== undefined) {
         throw new Error('Invalid year input');
     }
 
-    fs.mkdir(`src/${year}`, (err) => {
+    fs.mkdir(`src/year${year}`, (err) => {
         if (err) {
             if (err.code === "EEXIST") {
                 return console.error("Folder for this year already exists. Aborting.");
@@ -16,7 +16,7 @@ if (process.argv[2] !== undefined) {
             }
         }
         for (let i = 1; i <= 25; i++) {
-            const dayDir = `src/${year}/day-${i}`
+            const dayDir = `src/year${year}/day${i}`
             fs.mkdir(dayDir, (err) => {
                 if (!err) {
                     fs.writeFile(`${dayDir}/solution-${i}.ts`, `exports.solution = (input: string[]) => {

@@ -13,7 +13,7 @@ export const downloadInput = async (day: number, year: number) => {
         }
     })
         .then(async(response) => {
-            const filename = `src/${year}/day-${day}/input-${day}.txt`
+            const filename = `src/year${year}/day${day}/input-${day}.txt`
             console.log("Writing input to file: ", filename)
             await util.promisify(fs.writeFile)(filename, response.data.trim());
         })

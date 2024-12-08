@@ -1,4 +1,4 @@
-import getInput from "./src/utils/getInput";
+import getInput from "./src/ts/utils/getInput";
 import {downloadInput} from "./di";
 
 (async () => {
@@ -26,7 +26,7 @@ import {downloadInput} from "./di";
         }
     }
     const t0 = performance.now();
-    require(`./src/${year}/day-${day}/solution-${day}.ts`).solution(getInput(day, year, testing));
+    require(`./src/year${year}/day${day}/solution-${day}.ts`).solution(getInput(day, year, testing));
     const t1 = performance.now();
     console.log(`Execution time: ${t1 - t0} milliseconds.`);
 })();

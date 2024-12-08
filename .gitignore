@@ -28,5 +28,5 @@ testem.log
 Thumbs.db
 
 # input files
-/src/*/day-*/input-*.txt
-/src/*/day-*/test-*.txt
+/src/*/day*/input-*.txt
+/src/*/day*/test-*.txt

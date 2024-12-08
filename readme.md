@@ -40,9 +40,9 @@ ts-node run d //downloads real data for current day and runs solution on it (inp
 
 /* PAST DAYS */
 ts-node run 1 //runs day 1 of current year
-ts-node run 23 2022 //runs day 23 of year 2022 (real data)
-ts-node run 23 2022 t //runs day 23 of year 2022 (test data)
-ts-node run 23 2022 d //downloads real data for day 23 of year 2022 and runs solution on it (input-X.txt)
+ts-node run 23 2022 //runs day 23 of year year2022 (real data)
+ts-node run 23 2022 t //runs day 23 of year year2022 (test data)
+ts-node run 23 2022 d //downloads real data for day 23 of year year2022 and runs solution on it (input-X.txt)
 ```
 
 ## My workflow
