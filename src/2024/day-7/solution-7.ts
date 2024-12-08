@@ -29,7 +29,6 @@ exports.solution = (input: string[]) => {
             if (nextOperator === '+') {
                 return finish(x, position, resultTillNow + x.operands[position]);
             } else if (nextOperator === '*') {
-                const result = resultTillNow * x.operands[position];
                 return finish(x, position, resultTillNow * x.operands[position]);
             } else if (nextOperator === '||') {
                 let arr = '';
