@@ -16,6 +16,10 @@ type D10TrailHead = {
     point: D10MapPoint,
     peaks: Record<string, boolean | undefined>
 }
+type D10StackPoint = {
+    point: D10MapPoint;
+    tillNow: string;
+}
 
 exports.solution = (input: string[]) => {
     console.log(input);
@@ -58,19 +62,20 @@ exports.solution = (input: string[]) => {
 
 
 
-    const check = (p: D10MapPoint, th: D10TrailHead, stack: D10MapPoint[]) => {
-        if (p.h === 8) {
-            p.validHigherNeighbors.forEach(peak => {
-                th.peaks[getKey(peak)] = true;
+    const check = (p: D10StackPoint, th: D10TrailHead, stack: D10StackPoint[]) => {
+            p.point.validHigherNeighbors.forEach(peak => {
+                const key = `${p.tillNow}|${getKey(peak)}`;
+                if (p.point.h === 8) {
+                    th.peaks[key] = true;
+                } else {
+                    stack.push({point: peak, tillNow: key});
+                }
             })
-        } else {
-            stack.push(...p.validHigherNeighbors)
-        }
     }
 
     let score = 0;
     trailHeads.forEach((th) => {
-        const stack: D10MapPoint[] = [th.point];
+        const stack: D10StackPoint[] = [{point: th.point, tillNow: ''}];
         while (stack.length) {
             const p = stack.pop();
             if (p) {
@@ -81,6 +86,6 @@ exports.solution = (input: string[]) => {
     })
 
     console.log(trailHeads);
-    console.log("Part 1:", score);
+    console.log("Part 2:", score);
 
 }
