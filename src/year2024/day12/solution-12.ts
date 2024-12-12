@@ -12,6 +12,7 @@ type D12Plot = {
     points: D12Point[];
     area: number;
     perimeter: number;
+    sides: number;
 }
 
 
@@ -39,6 +40,54 @@ exports.solution = (input: string[]) => {
         })
     })
 
+    const getNumberOfSides = (pl: D12Plot): number => {
+        let sides = 0;
+
+        const pointMap: Record<string, number | undefined> = {}
+
+        pl.points.forEach(p => {
+            let k = getKey(p);
+            if (!pointMap[k]) pointMap[k] = 0;
+            pointMap[k]!++;
+
+            k = `${p.x};${p.y+1}`;
+            if (!pointMap[k]) pointMap[k] = 0;
+            pointMap[k]!++;
+
+            k = `${p.x+1};${p.y}`;
+            if (!pointMap[k]) pointMap[k] = 0;
+            pointMap[k]!++;
+
+            k = `${p.x+1};${p.y+1}`;
+            if (!pointMap[k]) pointMap[k] = 0;
+            pointMap[k]!++;
+        })
+
+        Object.keys(pointMap).forEach(k => {
+            const touchingCorners = pointMap[k];
+            if (!touchingCorners) return;
+            if (touchingCorners % 2 === 1) {
+                sides++;
+            } else if (touchingCorners === 2) {
+                //get the points around the point
+                console.log(k)
+                let [x,y] = k.split(';').map(Number)
+                const topLeft = (x > 0 && y > 0) ? m[x-1][y-1].c : '';
+                const topRight = (y > 0 && x < width) ? m[x][y-1].c : '';
+                const bottomLeft = (x > 0 && y < height) ? m[x-1][y].c : '';
+                const bottomRight = (x < width && y < height) ? m[x][y].c : '';
+
+                if (topLeft === bottomRight && topLeft === pl.c && topLeft != '') {
+                    sides += 2;
+                } else if (bottomLeft === topRight && bottomLeft === pl.c && bottomLeft != '') {
+                    sides += 2;
+                }
+            }
+        })
+
+        return sides;
+    }
+
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
             const point = m[x][y];
@@ -48,6 +97,7 @@ exports.solution = (input: string[]) => {
                     points: [],
                     area: 0,
                     perimeter: 0,
+                    sides: 0,
                 }
 
                 const stack = [point]
@@ -66,6 +116,8 @@ exports.solution = (input: string[]) => {
                     }
                 }
 
+                newPlot.sides = getNumberOfSides(newPlot);
+
                 plots.push(newPlot);
             }
         }
@@ -73,11 +125,10 @@ exports.solution = (input: string[]) => {
 
     let sum = 0;
     plots.forEach(p => {
-        sum += p.area * p.perimeter
+        sum += p.area * p.sides
     })
 
     console.log(plots);
-    console.log(m[1][1].neighborsOfSameType);
-    console.log("Part 1: ", sum)
+    console.log("Part 2: ", sum)
 
 }
