@@ -1,4 +1,6 @@
 import * as console from "node:console";
+import {Matrix} from "../../ts/utils/Matrix";
+import {equationsByCramersRule} from "../../ts/utils/algos/equationsByCramersRule";
 
 type D13Button = {
     cost: number;
@@ -53,9 +55,33 @@ exports.solution = (input: string[]) => {
             const {x: x2, y: y2} = mch.buttons[1];
             const {x: n1, y: n2} = mch.prize;
 
-            const b2 = (x1 * n2 - y1 * n1) / (x1 * y2 - y1 * x2);
-            const b1 = (n1 - b2 * x2) / x1;
+            /*
+             Variables to resolve:
+                b1 = ButtonA presses
+                b2 = ButtonB presses
 
+             Known values:
+                x1 = ButtonA x value
+                y1 = ButtonA y value
+                x2 = ButtonB x value
+                y2 = ButtonB y value
+                n1 = Prize x value
+                n2 = Prize y value
+
+             Equations:
+                x1 * b1  + x2 * b2 = n1
+                y1 * b1  + y2 * b2 = n2
+
+             Matrix from known values for these equations:
+                | x1  x2  n1 |
+                | y1  y2  n2 |
+             */
+            const matrix = new Matrix<number>().addRow([x1,x2,n1]).addRow([y1,y2,n2])
+            const [b1, b2] = equationsByCramersRule(matrix)
+
+            // My old, equation-on-paper solution, a lot shorter:
+            // const b2 = (x1 * n2 - y1 * n1) / (x1 * y2 - y1 * x2);
+            // const b1 = (n1 - b2 * x2) / x1;
             return (Number.isInteger(b1) && Number.isInteger(b2) ? b1 * 3 + b2 : false);
         }
 
