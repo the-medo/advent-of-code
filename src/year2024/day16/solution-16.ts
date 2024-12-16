@@ -1,3 +1,6 @@
+import {PriorityQueue} from "../../ts/utils/PriorityQueue";
+import * as os from "node:os";
+
 type D16Coordinate = {
     x: number;
     y: number;
@@ -131,15 +134,15 @@ exports.solution = (input: string[]) => {
 
 
 
+    const pq = new PriorityQueue<D16TraverseStep>()
+    pq.enqueue([start, 0, direction, `-`], 0);
 
-    let i = 0;
-    let traverseStack: D16TraverseStep[] = [ [start, 0, direction, `-`] ]
-    while (traverseStack.length) {
-        const step = traverseStack.pop();
+    while (true) {
+        const step = pq.dequeue();
         if (step) {
-            i++;
-            if (i % 10000000 === 0) console.log(i, traverseStack.length);
-            traverseStack.push(...traverse(step));
+            traverse(step.val).forEach(s => pq.enqueue(s, s[1]))
+        } else {
+            break;
         }
     }
 
