@@ -1,3 +1,9 @@
+/************************
+
+  TERRIBLE CODE, DO NOT READ
+
+ ***********************/
+
 
 type D16Coordinate = {
     x: number;
@@ -56,17 +62,12 @@ exports.solution = (input: string[]) => {
         const scoreMapKey = `${p.x};${p.y};${d}`;
         if (score > lowestScore) return -1;
         if (p.x === end!.x && p.y === end!.y) {
-            if (score < lowestScore) {
-                lowestScore = score
-            }
+            if (score < lowestScore) lowestScore = score
             return score;
         }
         if (scoreMap[scoreMapKey]) {
-            if (score < scoreMap[scoreMapKey].lowestEntranceScore) {
-                scoreMap[scoreMapKey].finalScore -= scoreMap[scoreMapKey].lowestEntranceScore - score;
-                scoreMap[scoreMapKey].lowestEntranceScore = score;
-            } else {
-                return scoreMap[scoreMapKey].finalScore;
+            if (score > scoreMap[scoreMapKey].lowestEntranceScore) {
+                return -1;
             }
         }
 
@@ -83,10 +84,18 @@ exports.solution = (input: string[]) => {
             if (!visitedKeys[nKey]) {
                 if (pStraightKey === nKey) {
                     const s = move(m[nKey], {...visitedKeys, [nKey]: true}, score+1, d);
+                    scoreMap[`${nKey};${d}`] = {
+                        lowestEntranceScore: score + 1,
+                        finalScore: s,
+                    }
                     scores.push(s)
                 } else if (pLeftKey === nKey || pRightKey === nKey) {
                     let dir = pLeftKey === nKey ? rLeft : rRight;
                     const s = move(m[nKey], {...visitedKeys, [nKey]: true}, score+1001, dir)
+                    scoreMap[`${nKey};${d}`] = {
+                        lowestEntranceScore: score + 1001,
+                        finalScore: s,
+                    }
                     scores.push(s)
                 }
             }
@@ -102,9 +111,33 @@ exports.solution = (input: string[]) => {
         return Math.min(...filteredScores);
     }
 
-    if (!start) throw new Error("No start point!")
-    const test = move(start, {[getKey(start.x, start.y)]: true}, 0, direction)
 
-    console.log(scoreMap)
-    console.log(test)
+
+    if (!start) throw new Error("No start point!")
+    const part1 = move(start, {[getKey(start.x, start.y)]: true}, 0, direction)
+
+    const bestPathKeys = Object.keys(scoreMap).filter(sm => scoreMap[sm].finalScore === part1)
+    const uniqueKeys = new Set(bestPathKeys.map(k => k.split(';').splice(0, 2).join(';')));
+    const uniqueKeysCount = uniqueKeys.size ;
+
+    const drawMap = () => {
+        console.log("=========================");
+        for (let row = 0; row < height; row++) {
+            let rowString = '';
+            for (let col = 0; col < width; col++) {
+                const k = getKey(col, row);
+                let char = m[k].c;
+                if (char === '.') {
+                    char = uniqueKeys.has(k) ? 'O' : '.';
+                }
+                rowString += char;
+            }
+            console.log(rowString);
+        }
+    }
+
+    console.log(scoreMap);
+    drawMap();
+    console.log("Part 1: ", part1)
+    console.log("Part 2:", uniqueKeysCount)
 }
