@@ -1,10 +1,3 @@
-/************************
-
-  TERRIBLE CODE, DO NOT READ
-
- ***********************/
-
-
 type D16Coordinate = {
     x: number;
     y: number;
@@ -17,20 +10,30 @@ type D16Point = D16Coordinate & {
 
 type D16Direction = D16Coordinate;
 type D16Map = Record<string, D16Point>;
-type D16VisitedMap = Record<string, boolean>;
+type D16Score = { lowestEntranceScore: number; nodeKeys: Set<string> };
+/**                    [point,    score,  direction index, parent key]    */
+type D16TraverseStep = [D16Point, number, number,          string];
 
 exports.solution = (input: string[]) => {
+    const t0 = performance.now();
+
     const m: D16Map = {};
-    const dirs: D16Direction[] = [{x: -1, y: 0},    {x: 0, y: -1},    {x: 1, y: 0},    {x: 0, y: 1}];
+    const dirs: D16Direction[] = [
+        {x: -1, y: 0},
+        {x: 0, y: -1},
+        {x: 1, y: 0},
+        {x: 0, y: 1}
+    ];
+    let direction = 2; //east
     const rotateLeft = (d: number): number => d === 0 ? 3 : d-1;
     const rotateRight = (d: number): number => d === 3 ? 0 : d+1;
+    const getKey = (x: number, y: number) => `${x};${y}`;
 
     let start: D16Point | undefined;
     let end: D16Point | undefined;
-    let direction = 2; //east
     let height = input.length, width = input[0].length;
-    const getKey = (x: number, y: number) => `${x};${y}`;
 
+    /** Parse input, every point has its own valid neighbors saved */
     input.forEach((row, y) => row.split('').forEach((c, x) => {
         const point: D16Point = {x, y, c, neighbors: []};
         m[getKey(x, y)] = point;
@@ -55,20 +58,49 @@ exports.solution = (input: string[]) => {
         }
     }));
 
-    let lowestScore = Infinity;
-    let scoreMap: Record<string, {lowestEntranceScore: number; finalScore: number}> = {}
+    //additional after-input checks
+    if (!start || !end) throw new Error("No starting or ending point!")
+    const startKey = getKey(start.x, start.y);
+    const endKey = getKey(end.x, end.y);
 
-    const move = (p: D16Point, visitedKeys: D16VisitedMap, score: number, d: number): number => {
+    let lowestScore = Infinity;
+    let scoreMap: Record<string, D16Score> = {}
+
+    /** Traverse method - returns array of next Traverse steps
+     *  - step is a touple in this format: [point, score, direction index, parent key]
+     * @param step
+     */
+    const traverse = (step: D16TraverseStep): D16TraverseStep[] => {
+        const [p, score, d, parentNodeKey] = step;
+
+        if (score > lowestScore) return [];
+
         const scoreMapKey = `${p.x};${p.y};${d}`;
-        if (score > lowestScore) return -1;
-        if (p.x === end!.x && p.y === end!.y) {
-            if (score < lowestScore) lowestScore = score
-            return score;
-        }
-        if (scoreMap[scoreMapKey]) {
-            if (score > scoreMap[scoreMapKey].lowestEntranceScore) {
-                return -1;
+
+
+        // check and update scoreMap
+        const hasResult = scoreMap[scoreMapKey];
+        if (hasResult) {
+            if (hasResult.lowestEntranceScore < score) {
+                return [];
+            } else if (hasResult.lowestEntranceScore === score) {
+                hasResult.nodeKeys.add(parentNodeKey);
+            } else {
+                scoreMap[scoreMapKey] = {
+                    lowestEntranceScore: score,
+                    nodeKeys: new Set<string>().add(parentNodeKey),
+                }
             }
+        } else {
+            scoreMap[scoreMapKey] = {
+                lowestEntranceScore: score,
+                nodeKeys: new Set<string>().add(parentNodeKey),
+            }
+        }
+
+        if (p.x === end!.x && p.y === end!.y) {
+            if (score < lowestScore) lowestScore = score;
+            return [];
         }
 
         const rLeft = rotateLeft(d);
@@ -78,47 +110,60 @@ exports.solution = (input: string[]) => {
         const pLeftKey = getKey(p.x + dirs[rLeft].x, p.y + dirs[rLeft].y);
         const pRightKey = getKey(p.x + dirs[rRight].x, p.y + dirs[rRight].y);
 
-        let scores: number[] = [];
+        let nextSteps: D16TraverseStep[] = [];
+
         p.neighbors.forEach(n => {
             const nKey = getKey(n.x, n.y)
-            if (!visitedKeys[nKey]) {
-                if (pStraightKey === nKey) {
-                    const s = move(m[nKey], {...visitedKeys, [nKey]: true}, score+1, d);
-                    scoreMap[`${nKey};${d}`] = {
-                        lowestEntranceScore: score + 1,
-                        finalScore: s,
-                    }
-                    scores.push(s)
-                } else if (pLeftKey === nKey || pRightKey === nKey) {
-                    let dir = pLeftKey === nKey ? rLeft : rRight;
-                    const s = move(m[nKey], {...visitedKeys, [nKey]: true}, score+1001, dir)
-                    scoreMap[`${nKey};${d}`] = {
-                        lowestEntranceScore: score + 1001,
-                        finalScore: s,
-                    }
-                    scores.push(s)
-                }
+            if (pStraightKey === nKey) {
+                const newScore = score+1;
+                const smk = scoreMap[`${nKey};${d}`];
+                if (!smk || smk.lowestEntranceScore >= newScore) nextSteps.push([m[nKey], newScore, d, `${p.x};${p.y};${d}`]);
+            } else if (pLeftKey === nKey || pRightKey === nKey) {
+                let dir = pLeftKey === nKey ? rLeft : rRight;
+                const newScore = score+1000;
+                const smk = scoreMap[`${p.x};${p.y};${dir}`];
+                if (!smk || smk.lowestEntranceScore >= newScore) nextSteps.push([m[`${p.x};${p.y}`], newScore, dir, `${p.x};${p.y};${d}`])
             }
         })
 
-        const filteredScores = scores.filter(s => s > -1);
-        if (filteredScores.length === 0) {
-            scoreMap[scoreMapKey] = {lowestEntranceScore: score, finalScore: -1};
-            return -1;
-        }
-
-        scoreMap[scoreMapKey] = {lowestEntranceScore: score, finalScore: Math.min(...filteredScores)};
-        return Math.min(...filteredScores);
+        return nextSteps;
     }
 
 
 
-    if (!start) throw new Error("No start point!")
-    const part1 = move(start, {[getKey(start.x, start.y)]: true}, 0, direction)
 
-    const bestPathKeys = Object.keys(scoreMap).filter(sm => scoreMap[sm].finalScore === part1)
-    const uniqueKeys = new Set(bestPathKeys.map(k => k.split(';').splice(0, 2).join(';')));
-    const uniqueKeysCount = uniqueKeys.size ;
+    let i = 0;
+    let traverseStack: D16TraverseStep[] = [ [start, 0, direction, `-`] ]
+    while (traverseStack.length) {
+        const step = traverseStack.pop();
+        if (step) {
+            i++;
+            if (i % 10000000 === 0) console.log(i, traverseStack.length);
+            traverseStack.push(...traverse(step));
+        }
+    }
+
+    const showFromScoreMap = (x: number, y: number) => console.log([0,1,2,3].map(d => scoreMap[`${x};${y};${d}`]));
+    const getAllDirKeys = (x: number, y: number) => [0,1,2,3].map(d => `${x};${y};${d}`);
+    const removeDirectionFromKey = (key: string): string => key.split(';').splice(0, 2).join(';');
+
+    const uniqueKeys = new Set<string>();
+
+
+    /** backtrack the steps to get all possible ways */
+    const endingKeys = getAllDirKeys(end.x, end.y).map(dirKey => scoreMap[dirKey]).filter(a => a !== undefined && a.lowestEntranceScore === lowestScore).map(a => [...a.nodeKeys]).flat();
+    console.log(endingKeys);
+    const backtrackStack: string[] = [...endingKeys];
+    while (backtrackStack.length) {
+        const step = backtrackStack.pop();
+        if (!step) continue;
+        if (uniqueKeys.has(step)) continue;
+        uniqueKeys.add(step);
+        const nk = scoreMap[step];
+        if (nk) backtrackStack.push(...nk.nodeKeys)
+    }
+
+    const uniqueKeysWithoutDirection = new Set([...uniqueKeys].map(uqd => removeDirectionFromKey(uqd)));
 
     const drawMap = () => {
         console.log("=========================");
@@ -128,7 +173,7 @@ exports.solution = (input: string[]) => {
                 const k = getKey(col, row);
                 let char = m[k].c;
                 if (char === '.') {
-                    char = uniqueKeys.has(k) ? 'O' : '.';
+                    char = uniqueKeysWithoutDirection.has(k) ? 'O' : '.';
                 }
                 rowString += char;
             }
@@ -136,8 +181,10 @@ exports.solution = (input: string[]) => {
         }
     }
 
-    console.log(scoreMap);
-    drawMap();
-    console.log("Part 1: ", part1)
-    console.log("Part 2:", uniqueKeysCount)
+    // drawMap();
+    console.log("Part 1:", lowestScore)
+    console.log("Part 2:", uniqueKeysWithoutDirection.size)
+
+    const t1 = performance.now();
+    console.log(`Execution time: ${t1 - t0} milliseconds.`);
 }
