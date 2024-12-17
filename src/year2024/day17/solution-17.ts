@@ -3,13 +3,13 @@ import { xor } from "../../ts/utils/xor";
 type D17Registers = [number, number, number]
 
 exports.solution = (input: string[]) => {
+    const t0 = performance.now();
+
     const registers = [0,1,2].map(i => parseInt(input[i].split(": ")[1])) as D17Registers;
     const program = input[4].split(": ")[1].split(",").map(Number)
 
-    let instructionPointer = 0;
-
-
     const compute = (registers: D17Registers): string[] => {
+        let instructionPointer = 0;
 
         const getComboOperand = (o: number): number => {
             if (o <= 3) {
@@ -24,13 +24,22 @@ exports.solution = (input: string[]) => {
             return 0;
         }
 
-        const instruction = (ip: number, log: boolean = false): [boolean, string|undefined] => {
-            if (ip+1>=program.length) {
+        /**
+         * This is really just based on the AoC instructions.
+         *
+         * Returns tuple: [
+         *                  boolean - jumpAfter = true if instruction is still supposed to be increased by 2
+         *                  string | undefined  = string if output is specified, otherwise undefined
+         *                ]
+         *
+         */
+        const instruction = (instructionP: number, log: boolean = false): [boolean, string | undefined] => {
+            if (instructionP+1>=program.length) {
                 console.log("HALT")
                 return [false, undefined];
             }
-            const opcode = program[ip];
-            const operand = program[ip+1];
+            const opcode = program[instructionP];
+            const operand = program[instructionP+1];
             const comboOperand = getComboOperand(operand);
 
             if (opcode === 0) { //ADV instruction - division
@@ -91,27 +100,30 @@ exports.solution = (input: string[]) => {
         return outputs;
     }
 
-    let combinations: number[][] = []
-    for (let i = 0; i < 16; i++) {
-        if (!combinations[i]) combinations[i] = [];
-        Array(8).fill(0).forEach((_, a) => {
-            combinations[i].push(Math.pow(8, i) * a);
-        })
-    }
-
-    let knownSemiResult = 0;
-    for (let i = combinations.length - 1; i >= 0; i--) {
-        for (let o = 0; o < combinations[i].length; o++) {
-            const semiResult = knownSemiResult + combinations[i][o];
+    /**
+     * Assumptions:
+     *   - based on instructions, we assume that powers of 8 are the key
+     *   - probably wouldn't work without 0,3 instruction ( A = A/2^3 )
+     *
+     * Starting from the last digit,
+     *
+     */
+    let knownResult = 0;
+    for (let i = program.length - 1; i >= 0; i--) {
+        for (let o = 0; o < 8; o++) {
+            const semiResult = knownResult + Math.pow(8, i) * o;
             const output = compute([semiResult, 0, 0]);
             if (output[i] === program[i].toString()) {
-                knownSemiResult += combinations[i][o]
+                knownResult = semiResult
                 break;
             }
         }
     }
 
     console.log("Part 1: ", compute(registers).join(","));
-    console.log("Part 2: ", knownSemiResult);
+    console.log("Part 2: ", knownResult);
+
+    const t1 = performance.now();
+    console.log(`Execution time: ${t1 - t0} milliseconds.`);
 }
 
