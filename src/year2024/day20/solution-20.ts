@@ -9,126 +9,97 @@ type D20Point = D20Coordinate & {
     lowestTime: number;
 }
 
-type D20Direction = D20Coordinate;
 type D20Map = Record<string, D20Point>;
 type D20TraverseStep = [D20Point, number];
 
-exports.solution = (input: string[]) => {
-    const m: D20Map = {};
-    const dirs: D20Direction[] = [
-        {x: -1, y: 0},
-        {x: 0, y: -1},
-        {x: 1, y: 0},
-        {x: 0, y: 1}
-    ];
+exports.solution = (input: string[], testing: boolean) => {
+    const run = (part: number) => {
+        const t0 = performance.now();
+        const scoreDiffNeeded = part === 1 ? (testing ? 2 : 100) : (testing ? 50 : 100);
+        const maxCheatDistance = part === 1 ? 2 : 20;
 
-    let start: D20Point | undefined;
-    let end: D20Point | undefined;
-    let height = input.length, width = input[0].length;
-    const getKey = (x: number, y: number) => `${x};${y}`;
-    const isOutOfBoundsXY = (x: number, y: number) => x < 0 || x >= width || y < 0 || y >= height;
+        const m: D20Map = {};
+        let start: D20Point | undefined;
+        let end: D20Point | undefined;
+        const getKey = (x: number, y: number) => `${x};${y}`;
 
-    /** Parse input, every point has its own valid neighbors saved */
-    input.forEach((row, y) => row.split('').forEach((c, x) => {
-        const point: D20Point = {x, y, c, neighbors: [], lowestTime: Infinity};
-        m[getKey(x, y)] = point;
-        if (c === 'S') {
-            point.c = '.'
-            start = point;
-        } else if (c === 'E') {
-            point.c = '.'
-            end = point;
+        const addNeighbors = (p1: D20Point, p2: D20Point) => {
+            if (p1.c !== p2.c) return;
+            p1.neighbors.push(p2);
+            p2.neighbors.push(p1);
         }
-        if (point.c === '.' || point.c === '#') {
-            const leftPoint = m[getKey(x-1,y)];
-            if (leftPoint?.c === point.c) {
-                leftPoint.neighbors.push(point);
-                point.neighbors.push(leftPoint);
+
+        input.forEach((row, y) => row.split('').forEach((c, x) => {
+            const point: D20Point = {x, y, c, neighbors: [], lowestTime: Infinity};
+            m[getKey(x, y)] = point;
+
+            if (c === 'S' || c === 'E') {
+                point.c = '.';
+                if (c === 'S') start = point;
+                if (c === 'E') end = point;
             }
-            const topPoint = m[getKey(x,y-1)];
-            if (topPoint?.c ===  point.c) {
-                topPoint.neighbors.push(point);
-                point.neighbors.push(topPoint);
+
+            if (point.c === '.') {
+                addNeighbors(point, m[getKey(x - 1, y)])
+                addNeighbors(point, m[getKey(x, y - 1)])
             }
+        }));
+
+        if (!start || !end) {
+            throw new Error('Start or end point not found');
         }
-    }));
 
-    if (!start || !end) {
-        throw new Error('Start or end point not found');
-    }
+        const timeMap: Record<number, D20Point> = {}
+        const possibleCheats: [D20Point, D20Point, number][] = []
 
-    const timeMap: Record<number, D20Point> = {}
-    const possibleCheats: [D20Point, D20Point, number][] = []
+        const traverse = (step: D20TraverseStep): D20TraverseStep[] => {
+            const [p, score] = step;
+            p.lowestTime = score;
+            timeMap[score] = p;
 
-    const traverse = (step: D20TraverseStep): D20TraverseStep[] => {
-        const [p, score] = step;
-        p.lowestTime = score;
-        timeMap[score] = p;
-
-        if (score >= 100) {
-            for (let i = 0; i <= score - 100; i++) {
-                const diff = Math.abs(p.x - timeMap[i].x) + Math.abs(p.y - timeMap[i].y);
-                if (diff <= 20) {
-                    const newScore = i + diff;
-                    const cheatSize = score - newScore;
-                    possibleCheats.push([timeMap[i], p, cheatSize])
+            if (score >= scoreDiffNeeded) {
+                for (let i = 0; i <= score - scoreDiffNeeded; i++) {
+                    const distance = Math.abs(p.x - timeMap[i].x) + Math.abs(p.y - timeMap[i].y);
+                    if (distance <= maxCheatDistance) {
+                        const newScore = i + distance;
+                        const cheatSize = score - newScore;
+                        possibleCheats.push([timeMap[i], p, cheatSize])
+                    }
                 }
             }
-        }
 
-        if (p.x === end!.x && p.y === end!.y) {
-            return [];
-        }
-        const result: D20TraverseStep[] = [];
-
-        p.neighbors.forEach(n => {
-            if (n.lowestTime > score) {
-                result.push([n, score+1]);
+            if (p.x === end!.x && p.y === end!.y) {
+                return [];
             }
-        })
+            const result: D20TraverseStep[] = [];
 
-        return result;
-    }
+            p.neighbors.forEach(n => {
+                if (n.lowestTime > score) {
+                    result.push([n, score + 1]);
+                }
+            })
 
-    const cheatForPointInDirection = (point: D20Point, direction: D20Direction): number => {
-        const p1: D20Coordinate = {x: point.x + direction.x, y: point.y + direction.y}, p1Key = getKey(p1.x, p1.y);
-        const p2: D20Coordinate = {x: point.x + direction.x * 2, y: point.y + direction.y * 2}, p2Key = getKey(p2.x, p2.y);
-        const oob = isOutOfBoundsXY(p2.x, p2.y);
+            return result;
+        }
 
-        if (oob) return 0;
-        if (m[p1Key].c === '#' || m[p2Key].c === '#') {
-            if (m[p2Key].c === '.') {
-                return Math.max(m[p2Key].lowestTime - point.lowestTime - 2, 0);
+        const stack: D20TraverseStep[] = [[start, 0]];
+        while (stack.length > 0) {
+            const step = stack.pop();
+            if (step) {
+                const newSteps = traverse(step)
+                stack.push(...newSteps);
             }
         }
 
-        return 0;
+        const cheatResults = possibleCheats.map(([, , scoreDiff]) => scoreDiff)//;.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);;
+        const atLeast100 = cheatResults.filter(s => s >= scoreDiffNeeded);
+
+        console.log(`Part ${part}: ${atLeast100.length}`);
+
+        const t1 = performance.now();
+        console.log(`Execution time: ${t1 - t0} milliseconds.`);
     }
 
-    const cheatForPoint = (point: D20Point): number[] => {
-        return dirs.map(d => cheatForPointInDirection(point, d));
-    }
-
-    const stack: D20TraverseStep[] = [[start, 0]];
-    const racePoints: D20TraverseStep[] = [...stack];
-    while (stack.length > 0) {
-        const step = stack.pop();
-        if (step) {
-            const newSteps = traverse(step)
-            stack.push(...newSteps);
-            racePoints.push(...newSteps);
-        }
-    }
-
-
-
-    const cheatResults = racePoints.map(([point]) => cheatForPoint(point)).flat().filter(s => s > 0); //.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);
-    const atLeast100 = cheatResults.filter(s => s >= 100);
-
-    const cheatResults2 = possibleCheats.map(([, ,scoreDiff]) => scoreDiff)//;.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);;
-    const atLeast100_2 = cheatResults2.filter(s => s >= 100);
-
-
-    console.log("Part 1: ", atLeast100.length);
-    console.log("Part 2: ", atLeast100_2.length);
+    run(1);
+    run(2);
 }

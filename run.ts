@@ -27,7 +27,7 @@ import {downloadInput} from "./di";
     }
     const solution = require(`./src/year${year}/day${day}/solution-${day}.ts`);
     const input = getInput(day, year, testing);
-    solution.solution(input);
+    solution.solution(input, testing);
 
 })();
 
