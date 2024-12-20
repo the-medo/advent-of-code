@@ -57,9 +57,25 @@ exports.solution = (input: string[]) => {
         throw new Error('Start or end point not found');
     }
 
+    const timeMap: Record<number, D20Point> = {}
+    const possibleCheats: [D20Point, D20Point, number][] = []
+
     const traverse = (step: D20TraverseStep): D20TraverseStep[] => {
         const [p, score] = step;
         p.lowestTime = score;
+        timeMap[score] = p;
+
+        if (score >= 100) {
+            for (let i = 0; i <= score - 100; i++) {
+                const diff = Math.abs(p.x - timeMap[i].x) + Math.abs(p.y - timeMap[i].y);
+                if (diff <= 20) {
+                    const newScore = i + diff;
+                    const cheatSize = score - newScore;
+                    possibleCheats.push([timeMap[i], p, cheatSize])
+                }
+            }
+        }
+
         if (p.x === end!.x && p.y === end!.y) {
             return [];
         }
@@ -104,10 +120,15 @@ exports.solution = (input: string[]) => {
         }
     }
 
-    const cheatResults = racePoints.map(([point]) => cheatForPoint(point)).flat().filter(s => s > 0);
-    //.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);
+
+
+    const cheatResults = racePoints.map(([point]) => cheatForPoint(point)).flat().filter(s => s > 0); //.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);
     const atLeast100 = cheatResults.filter(s => s >= 100);
+
+    const cheatResults2 = possibleCheats.map(([, ,scoreDiff]) => scoreDiff)//;.reduce((p, c) => ({...p, [c]: p[c] ? p[c] + 1 : 1}), {} as Record<number, number>);;
+    const atLeast100_2 = cheatResults2.filter(s => s >= 100);
 
 
     console.log("Part 1: ", atLeast100.length);
+    console.log("Part 2: ", atLeast100_2.length);
 }
