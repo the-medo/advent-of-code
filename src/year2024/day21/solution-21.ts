@@ -10,6 +10,7 @@ type D21Keypad = Record<string, D21Button>;
 exports.solution = (input: string[]) => {
 
     const run = (part: number) => {
+        const t0 = performance.now();
         /**
          * Keypad mapping - numeric keypad
          */
@@ -192,9 +193,11 @@ exports.solution = (input: string[]) => {
         })
 
 
+        const t1 = performance.now();
+        console.log(`Execution time: ${t1 - t0} milliseconds.`);
         console.log(`Part ${part}: `, totalComplexity)
     }
 
-    run(1);
+    // run(1);
     run(2);
 }
