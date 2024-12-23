@@ -1,4 +1,5 @@
 import {stringSort} from "../../ts/utils/stringSort";
+import {bkTestMap, BronKerbosch} from "../../ts/utils/algos/graphBronKerbosch";
 
 exports.solution = (input: string[]) => {
     const t0 = performance.now();
@@ -6,12 +7,21 @@ exports.solution = (input: string[]) => {
 
     /** Parse input - map all computer pairs */
     const compMap: Record<string, Record<string, boolean>> = {};
+    const bkCompMap: Record<string, string[]> = {};
     input.forEach(row => {
         const [comp1, comp2] = row.split('-');
-        if (!compMap[comp1]) compMap[comp1] = {};
-        if (!compMap[comp2]) compMap[comp2] = {};
+        if (!compMap[comp1]) {
+            compMap[comp1] = {};
+            bkCompMap[comp1] = [];
+        }
+        if (!compMap[comp2]) {
+            compMap[comp2] = {};
+            bkCompMap[comp2] = [];
+        }
         compMap[comp1][comp2] = true;
         compMap[comp2][comp1] = true;
+        bkCompMap[comp1].push(comp2);
+        bkCompMap[comp2].push(comp1);
     })
 
     /** Get groups of three computers with at least one computer name starting with "t"
@@ -40,22 +50,25 @@ exports.solution = (input: string[]) => {
      *      - create LAN with this computer, and one by one check if connected computers are part of this LAN
      *      - if that computer is connected to all on LAN so far, add it to lan and continue checking other connected computers
      */
-    let largestLanSize = 0;
-    let largestLanKey: string = '';
-    allComps.forEach(mainComputer => {
-        let compsOnThisLan = [mainComputer];
-        const compsConnectedToMainComputer = Object.keys(compMap[mainComputer]);
-        compsConnectedToMainComputer.forEach(cc => {
-            const connected = compsOnThisLan.find(ccsf => !(compMap[cc][ccsf])) === undefined;
-            if (connected) compsOnThisLan.push(cc);
-        })
+    // let largestLanSize = 0;
+    // let largestLanKey: string = '';
+    // allComps.forEach(mainComputer => {
+    //     let compsOnThisLan = [mainComputer];
+    //     const compsConnectedToMainComputer = Object.keys(compMap[mainComputer]);
+    //     compsConnectedToMainComputer.forEach(cc => {
+    //         const connected = compsOnThisLan.find(ccsf => !(compMap[cc][ccsf])) === undefined;
+    //         if (connected) compsOnThisLan.push(cc);
+    //     })
+    //
+    //     const lanKey = getKey(compsOnThisLan);
+    //     if (compsOnThisLan.length > largestLanSize) {
+    //         largestLanSize = compsOnThisLan.length;
+    //         largestLanKey = lanKey;
+    //     }
+    // })
+    const bkt = BronKerbosch(bkCompMap, new Set(), new Set(allComps), new Set()) ?? [];
+    const largestLanKey = getKey([...bkt])
 
-        const lanKey = getKey(compsOnThisLan);
-        if (compsOnThisLan.length > largestLanSize) {
-            largestLanSize = compsOnThisLan.length;
-            largestLanKey = lanKey;
-        }
-    })
 
     console.log("Part 1: ", groupsWithT.size);
     console.log("Part 2: ", largestLanKey);
