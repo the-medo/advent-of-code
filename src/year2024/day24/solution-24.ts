@@ -12,17 +12,22 @@ type D24Connections = {
     f: string;
 }
 
-const operationMap: Record<string, D24Operation> = {
-    "AND": 0,
-    "OR": 1,
-    "XOR": 2,
-};
+type D24Node = {
+    n: string;
+    operation: string,
+    operands: string[];
+    operandNodes: D24Node[];
+    usedIn: D24Node[];
+    value: number;
+}
 
 exports.solution = (input: string[]) => {
     let wires: Record<string, number> = {};
     let commands: D24Connections[] = [];
+    let graph: Record<string, D24Node> = {};
     let fillingCommands = false;
-    const finalResults: string[] = []
+    const finalResults: string[] = [];
+    const operationMap: Record<string, string> = {};
     input.forEach(row => {
         if (row === '') {
             fillingCommands = true;
@@ -30,57 +35,115 @@ exports.solution = (input: string[]) => {
         }
         if (fillingCommands) {
             const [command, resultInto] = row.split(" -> ");
-            const [w1, operation, w2] = command.split(" ");
-            const transformedOperation = 0;
-            commands.push({
-                w1,
-                w2,
-                operation: operationMap[operation]!,
-                f: resultInto,
-            })
+            let [w1, operation, w2] = command.split(" ");
+            [w1,w2] = [w1, w2].sort(stringSort)
+            graph[resultInto] = {
+                n: resultInto,
+                operation: operation,
+                operands: [w1, w2],
+                operandNodes: [],
+                usedIn: [],
+                value: Infinity,
+            }
+            operationMap[`${w1}${operation}${w2}`] = resultInto;
             if (resultInto[0] === 'z') finalResults.push(resultInto);
         } else {
             const [wireName, wireValue] = row.split(': ');
-            wires[wireName] = parseInt(wireValue);
+            graph[wireName] = {
+                n: wireName,
+                operation: '',
+                operands: [],
+                operandNodes: [],
+                usedIn: [],
+                value: parseInt(wireValue),
+            }
         }
-    })
+    });
+
+    Object.entries(graph).forEach(([name, node],i) => {
+        node.operands.forEach((o) => {
+            graph[o].usedIn.push(node);
+            node.operandNodes.push(graph[o]);
+        })
+    });
 
     console.log(wires)
     console.log(commands)
 
-    let stack: D24Connections[] = commands;
+    const processNode = (n: D24Node) => {
+        if (n.value === Infinity) {
+            n.operandNodes.forEach(on => {
+                if (on.value === Infinity) processNode(on);
+            })
+            const [on1, on2] = n.operandNodes;
+            if (n.operation === "OR") { // OR
+                n.value = on1.value || on2.value ? 1 : 0;
+            } else if (n.operation === "XOR") { // XOR
+                n.value = on1.value !== on2.value ? 1 : 0;
+            } else if (n.operation === "AND") { // AND
+                n.value = on1.value === 1 && on2.value === 1 ? 1 : 0;
+            }
 
-    while (stack.length > 0) {
-        const c = stack.shift();
-        if (c) {
-            if (wires[c.w1] === undefined) console.log("Missing ", c.w1)
-            if (wires[c.w2] === undefined) console.log("Missing ", c.w2)
-            if (wires[c.w1] === undefined || wires[c.w2] === undefined) {
-                stack.push(c);
-                continue;
-            }
-            console.log("Computing..!!")
-            if (c.operation === 1) { // OR
-                wires[c.f] = wires[c.w1] || wires[c.w2] ? 1 : 0;
-            } else if (c.operation === 2) { // XOR
-                wires[c.f] = wires[c.w1] !== wires[c.w2] ? 1 : 0;
-            } else if (c.operation === 0) { // XOR
-                wires[c.f] = wires[c.w1] === 1 && wires[c.w2] === 1 ? 1 : 0;
-            }
-            if (c.f[0] === 'z') {
-                const all = finalResults.find(z => wires[z] === undefined) === undefined;
-                if (all) {
-                    stack = [];
-                }
-            }
+            n.usedIn.forEach(un => processNode(un));
         }
     }
 
-    const sortedWires = Object.keys(wires).sort(stringSortDesc);
+    const nodeRules = (n: D24Node, values: boolean, recursive: number): string => {
+        if (n.operandNodes.length === 0) return values ? n.value.toString() : n.n;
+        if (recursive === 0) return `(${n.operands[0]} ${n.operation} ${n.operands[1]} [${n.n}])`;
+        return `(${nodeRules(n.operandNodes[0], values, recursive - 1)} ${n.operation} ${nodeRules(n.operandNodes[1], values, recursive - 1)}) [${n.n}]`
+    }
 
-    const keysStartingWithZ = sortedWires.filter(k => k[0] === 'z');
-    const mappedToNumbers = keysStartingWithZ.map(z => wires[z]);
-    const binary = mappedToNumbers.join('');
-    const val = parseInt(binary, 2);
-    console.log("Part 1: ", val);
+    Object.values(graph).forEach(n => processNode(n));
+
+    const sortedWires = Object.keys(graph).sort(stringSortDesc);
+
+    const getKeysFromLetter = (letter: string) => sortedWires.filter(k => k[0] === letter[0]);
+    const getBinaryValueFromLetter = (letter: string) => getKeysFromLetter(letter).map(z => graph[z].value).join('');
+
+    const binaryZ = getBinaryValueFromLetter('z')
+    const binaryX = getBinaryValueFromLetter('x')
+    const binaryY = getBinaryValueFromLetter('y')
+    const wantedZ = (parseInt(binaryX, 2) + parseInt(binaryY, 2)).toString(2);
+    const zKeys = getKeysFromLetter('z');
+
+
+    console.log("Part 1: ", parseInt(binaryZ, 2), binaryZ);
+    console.log(binaryX);
+    console.log(binaryY);
+    console.log(wantedZ);
+    // console.log(graph['z34']);
+
+    zKeys.forEach((zKey) => {
+        console.log(nodeRules(graph[zKey], false, 2));
+    })
+    console.log(nodeRules(graph["rkv"], false, 2));
+    console.log(graph["sdj"]);
+
+    // console.log(graph['y12'].value, ' AND', graph['x12'].value, ' = mqn', graph['mqn'].value)
+    // console.log(graph['ksn'].value, ' XOR', graph['nft'].value, ' = jpj', graph['jpj'].value)
+
+    const getCode = (x: string, n: number) => n < 10 ? `${x}0${n}` : `${x}${n}`;
+
+    const check = (n: number, previousAndInto: string) => {
+        const x = getCode('x', n);
+        const y = getCode('y', n);
+        const and = `${x}AND${y}`;
+        const xor = `${x}XOR${y}`;
+
+        const currentXor = operationMap[xor];
+        const currentAnd = operationMap[and];
+
+        if (currentXor + 'XOR' + previousAndInto)
+
+        if (previousAndInto !== '') {
+
+        }
+
+    }
+
+    console.log(nodeRules(graph['bvp'], false, 2))
+    console.log(graph['bvp'].usedIn)
+    console.log(nodeRules(graph['kgj'], false, 2))
+    console.log(['rts','z07','vvw','chv','kgj','z26','z12','jpj'].sort(stringSort).join(','))
 }
