@@ -21,6 +21,8 @@ type D24Node = {
     value: number;
 }
 
+const getOperationCode = (k1: string, k2: string, operation: string) => [k1,k2].sort(stringSort).join(operation);
+
 exports.solution = (input: string[]) => {
     let wires: Record<string, number> = {};
     let commands: D24Connections[] = [];
@@ -45,7 +47,7 @@ exports.solution = (input: string[]) => {
                 usedIn: [],
                 value: Infinity,
             }
-            operationMap[`${w1}${operation}${w2}`] = resultInto;
+            operationMap[getOperationCode(w1, w2, operation)] = resultInto;
             if (resultInto[0] === 'z') finalResults.push(resultInto);
         } else {
             const [wireName, wireValue] = row.split(': ');
@@ -142,8 +144,77 @@ exports.solution = (input: string[]) => {
 
     }
 
-    console.log(nodeRules(graph['bvp'], false, 2))
-    console.log(graph['bvp'].usedIn)
-    console.log(nodeRules(graph['kgj'], false, 2))
-    console.log(['rts','z07','vvw','chv','kgj','z26','z12','jpj'].sort(stringSort).join(','))
+    const x00XORy00 = operationMap[`x00XORy00`]; // has to be z00
+    const x00ANDy00 = operationMap[`x00ANDy00`];
+    const x01XORy01 = operationMap[`x01XORy01`];
+
+    // let lowerCondition = x00ANDy00;
+    let lowerCondition = getOperationCode(x01XORy01, x00ANDy00, 'AND');
+    // let lowerLevelXor = x01XORy01;
+    let lowerLevelAnd = `x01ANDy01`;
+    let mismatchedOperations: string[] = [];
+
+    /**
+     * (((pnn OR whj [bmp]) AND (x44 XOR y44 [rrq])) [cbv] OR (x44 AND y44) [gqr]) [z45]
+     * (((x43 AND y43 [pnn]) OR (sch AND srj [whj])) [bmp] XOR (x44 XOR y44) [rrq]) [z44]
+     * (((ksp AND pvj [dkc]) OR (x42 AND y42 [mkg])) [sch] XOR (x43 XOR y43) [srj]) [z43]
+     * ...
+     * ((x04 XOR y04) [cjb] XOR ((x03 AND y03 [htr]) OR (bcj AND bkh [rhq])) [rjc]) [z04]
+     * ((x03 XOR y03) [bcj] XOR ((qkf AND wsv [pqc]) OR (x02 AND y02 [vdf])) [bkh]) [z03]
+     * (((x01 AND y01 [bdf]) OR (jjd AND whb [wbw])) [qkf] XOR (x02 XOR y02) [wsv]) [z02]
+     * ((x01 XOR y01) [jjd] XOR (x00 AND y00) [whb]) [z01]
+     * (x00 XOR y00) [z00]
+     */
+    console.log("----------------------------------------")
+    for (let i = 2; i <= 42; i++) {
+        const xCode = getCode('x', i);
+        const yCode = getCode('y', i);
+        const zCode = getCode('z', i);
+        const z = graph[zCode];
+        if (!z) throw new Error(zCode + " doesnt exist, weird");
+
+        let currentXor = getOperationCode(xCode, yCode, "XOR");
+        let currentXorResult = operationMap[currentXor];
+        let lowerLevelAndResult = operationMap[lowerLevelAnd];
+        let lowerConditionResult = operationMap[lowerCondition];
+        console.log({lowerLevelAnd, lowerCondition, lowerLevelAndResult, lowerConditionResult})
+
+        //Part 1: // lowerLevelAndResult (x01 AND y01 [bdf]) OR lowerConditionResult (jjd AND whb [wbw])
+        const part1 = getOperationCode(lowerLevelAndResult, lowerConditionResult, 'OR');
+        const part1Result = operationMap[part1];
+        //Part 2: // currectXorResult (x02 XOR y02) [wsv];
+        const part2Result = currentXorResult;
+        // Part1 XOR Part 2
+        const mainXor = getOperationCode(part1Result, part2Result, 'XOR');
+        const mainXorResult = operationMap[mainXor];
+
+        console.log(i, { part1, part1Result, part2Result})
+
+        const part1Node = z.operandNodes.find(on => on.n === part1Result);
+        const part2Node = z.operandNodes.find(on => on.n === part2Result);
+
+        //check for XOR;
+        if (z.operation !== 'XOR' || (!part1Node && !part2Node)) {
+            mismatchedOperations.push(zCode, mainXorResult);
+            lowerLevelAnd = getOperationCode(getCode('x', i), getCode('y', i), 'AND');
+            lowerCondition = getOperationCode(part1Result, part2Result, 'AND');
+            continue;
+        }
+        //find part 1:
+        if (!part1Node && part2Node) {
+            const theOtherNode = z.operandNodes.find(on => on.n !== part2Node.n)!;
+            mismatchedOperations.push(part1Result, theOtherNode.n);
+        } else if (part1Node && !part2Node) {
+            const theOtherNode = z.operandNodes.find(on => on.n !== part1Node.n)!;
+            mismatchedOperations.push(part2Result, theOtherNode.n);
+        }
+        lowerLevelAnd = getOperationCode(getCode('x', i), getCode('y', i), 'AND');
+        lowerCondition = getOperationCode(part1Result, part2Result, 'AND');
+
+    }
+
+    // console.log(mismatchedOperations);
+    // console.log(operationMap);
+
+    // console.log(['rts','z07','vvw','chv','kgj','z26','z12','jpj'].sort(stringSort).join(','))
 }
