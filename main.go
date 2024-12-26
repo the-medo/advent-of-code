@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/the-medo/advent-of-code/src/year2021"
 	"github.com/the-medo/advent-of-code/src/year2023"
 	"github.com/the-medo/advent-of-code/src/year2024"
 )
@@ -13,6 +14,8 @@ func main() {
 	flag.Parse()
 
 	switch *year {
+	case 2021:
+		year2021.Solve(*day, *realInput)
 	case 2023:
 		year2023.Solve(*day, *realInput)
 	case 2024:
