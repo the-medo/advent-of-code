@@ -13,10 +13,19 @@ const getFirstHalf = (rangePart: number, minMax: 'min' | 'max'): number => {
 const checkValueAgainstRange = (value: number, r: D2Range): number => {
     let doubledId = parseInt(`${value}${value}`);
     if (doubledId >= r.min && doubledId <= r.max) {
-        console.log(doubledId)
         return doubledId;
     }
     return 0;
+}
+
+const isInvalidIdForLength = (s: string[], len: number) => (s.length % len === 0 && s.length > len && !s.find((c, i) => c !== s[i % len]))
+
+const checkValueAgainstRange2 = (value: number, r: D2Range): number => {
+    const s = value.toString().split('');
+    for (let i = 6; i > 0; i--) { //just assuming there are no more than 12 digit numbers (6*2)
+        if (isInvalidIdForLength(s, i)) return value;
+    }
+    return 0
 }
 
 exports.solution = (input: string[]) => {
@@ -28,23 +37,21 @@ exports.solution = (input: string[]) => {
         const number = i.split('-');
         const [min, max] = number.map(Number);
         ranges.push({ min, max });
-        console.log({min, max})
     });
 
-    let invalidIds = 0;
-    let sum = 0;
+    // ------------------------------------------------------------------------
+    let invalidIdsPart1 = 0;
+    let sumPart1 = 0;
 
     ranges.forEach(r => {
         const minHalf = getFirstHalf(r.min, 'min');
         const maxHalf = getFirstHalf(r.max, 'max');
 
-        console.log({minHalf, maxHalf}, { min: r.min, max: r.max})
-
         for (let i = minHalf; i <= maxHalf; i++) {
             const invalid = checkValueAgainstRange(i, r);
             if (invalid > 0) {
-                invalidIds++;
-                sum += invalid;
+                invalidIdsPart1++;
+                sumPart1 += invalid;
             }
         }
         /**
@@ -53,13 +60,31 @@ exports.solution = (input: string[]) => {
         if (maxHalf < minHalf) {
             let invalid = checkValueAgainstRange(minHalf, r);
             if (invalid > 0) {
-                invalidIds++;
-                sum += invalid;
+                invalidIdsPart1++;
+                sumPart1 += invalid;
             }
         }
     })
-    
-    console.log("Part 1: ", sum);
+
+    console.log(`Part 1: ${sumPart1} (${invalidIdsPart1})`);
+
+
+    // ------------------------------------------------------------------------
+    let invalidIdsPart2 = 0;
+    let sumPart2 = 0;
+
+    ranges.forEach(r => {
+        for (let i = r.min; i <= r.max; i++) {
+            const invalid = checkValueAgainstRange2(i, r);
+            if (invalid > 0) {
+                invalidIdsPart2++;
+                sumPart2 += invalid;
+            }
+        }
+    });
+
+    console.log(`Part 2: ${sumPart2} (${invalidIdsPart2})`);
+    // ------------------------------------------------------------------------
     
     const t1 = performance.now();
     console.log(`Execution time: ${t1 - t0} milliseconds.`);
