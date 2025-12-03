@@ -67,7 +67,8 @@ exports.solution = (input: string[]) => {
     })
 
     console.log(`Part 1: ${sumPart1} (${invalidIdsPart1})`);
-
+    const t1 = performance.now();
+    console.log(`Execution time 1: ${t1 - t0} milliseconds.`);
 
     // ------------------------------------------------------------------------
     let invalidIdsPart2 = 0;
@@ -85,7 +86,7 @@ exports.solution = (input: string[]) => {
 
     console.log(`Part 2: ${sumPart2} (${invalidIdsPart2})`);
     // ------------------------------------------------------------------------
-    
-    const t1 = performance.now();
-    console.log(`Execution time: ${t1 - t0} milliseconds.`);
+
+    const t2 = performance.now();
+    console.log(`Execution time 2: ${t2 - t1} milliseconds.`);
 }
