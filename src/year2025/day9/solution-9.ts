@@ -3,7 +3,6 @@ import console from "node:console";
 type D9RedTile = {
     x: number;
     y: number;
-    nextPointDirection?: 'up' | 'down' | 'left' | 'right' | undefined;
 }
 
 type D9Rectangle = {
@@ -47,37 +46,22 @@ const d9Part1 = (input: string[]) => {
 
 const d9Part2 = (input: string[]) => {
     const t0 = performance.now();
-
-    const mRows: Record<number, D9RedTile[] | undefined> = {}
-    const mCols: Record<number, D9RedTile[] | undefined> = {}
+    const m: Record<number, Record<number, string>> = {}
     const redTiles: D9RedTile[] = [];
     const rectangles: D9Rectangle[] = [];
-
-    let mostRecentRedTile: D9RedTile | undefined;
-
-    const updateNextPointDirection = (mostRecentTile: D9RedTile, newTile: D9RedTile) => {
-        if (newTile.x === mostRecentTile.x) {
-            mostRecentTile.nextPointDirection = newTile.y > mostRecentTile.y ? 'down' : 'up';
-        } else if (newTile.y === mostRecentTile.y) {
-            mostRecentTile.nextPointDirection = newTile.x > mostRecentTile.x ? 'right' : 'left';
-        } else {
-            console.error("This shouldn't happen!")
-        }
-    }
+    let maxX = 0
+    let maxY = 0
 
     input.forEach(row => {
         const [colIndex, rowIndex] = row.split(',').map(Number);
 
         const newRedTile: D9RedTile = { x: colIndex, y: rowIndex }
 
-        if (mostRecentRedTile) {
-            updateNextPointDirection(mostRecentRedTile, newRedTile);
-        }
-        mostRecentRedTile = newRedTile;
-        if (!mRows[newRedTile.y]) mRows[newRedTile.y] = [];
-        if (!mCols[newRedTile.x]) mCols[newRedTile.x] = [];
-        mRows[newRedTile.y]!.push(newRedTile);
-        mCols[newRedTile.x]!.push(newRedTile);
+        if (colIndex > maxX) maxX = colIndex;
+        if (rowIndex > maxY) maxY = rowIndex;
+        if (!m[newRedTile.y]) m[newRedTile.y] = {};
+        m[newRedTile.y][newRedTile.x] = '#';
+
 
         redTiles.forEach(oldRedTile => {
             const area = (Math.abs(newRedTile.x - oldRedTile.x) + 1) * (Math.abs(newRedTile.y - oldRedTile.y) + 1);
@@ -92,53 +76,96 @@ const d9Part2 = (input: string[]) => {
         redTiles.push(newRedTile);
     })
 
-    updateNextPointDirection(redTiles[0], mostRecentRedTile!);
-
     rectangles.sort((a,b) => b.area - a.area);
-    console.log("Rectangles: ", rectangles)
 
+    const checkedIfCheckedBefore = (x: number, y: number) => {
+        if (!m[y]) {
+            m[y] = {};
+            return 'not-checked';
+        }
+        if (m[y][x] === 'X') return false; // checked before and failed
+        if (m[y][x] === '#') return true;  // checked before and succeeded
+        return 'not-checked';
+    }
 
+    const checkPointInPolygon = (p: D9RedTile, polygon: D9RedTile[]) => {
+        const { x, y } = p;
+        let windingNumber = 0
+        for (let i = 0; i < polygon.length; i++) {
+            const { x: x1, y: y1 } = polygon[i];
+            const { x: x2, y: y2 } = polygon[ (i + 1) % polygon.length];
 
-    const checkRectangle = (r: D9Rectangle): boolean => {
+            if (x1 === x2 && p.x === x1 && p.y >= Math.min(y1, y2) && p.y <= Math.max(y1, y2)) return true;
+            if (y1 === y2 && p.y === y1 && p.x >= Math.min(x1, x2) && p.x <= Math.max(x1, x2)) return true;
+
+            if (y1 <= y) {
+                if (y2 > y && ((x2 - x1) * (y - y1) - (x - x1) * (y2 - y1)) > 0) {
+                    windingNumber++;
+                }
+            } else {
+                if (y2 <= y && ((x2 - x1) * (y - y1) - (x - x1) * (y2 - y1)) < 0) {
+                    windingNumber--;
+                }
+            }
+        }
+
+        return windingNumber !== 0;
+    }
+
+    const checkRectangle = (r: D9Rectangle, polygon: D9RedTile[]) => {
         const startX = Math.min(r.start.x, r.end.x)
         const endX = Math.max(r.start.x, r.end.x)
         const startY = Math.min(r.start.y, r.end.y)
         const endY = Math.max(r.start.y, r.end.y)
-        const log = r.start.x === 2 && r.start.y === 3 && r.end.x === 11 && r.end.y === 1
 
-        if (log) console.log({startX, endX, startY, endY})
+        const pointsToCheck: D9RedTile[] = [];
 
-        // top row: startX -> endX; startY              --not allowed: 'down'
-        // right column: startY -> endY; endX           --not allowed: 'left'
-        // bottom row: endX -> startX; endY             --not allowed: 'up'
-        // left column: endY -> startY; startX          --not allowed: 'right'
-
-        const checkDirection = (rowOrCol: 'row' | 'col', start: number, end: number, index: number, notAllowedDirection: D9RedTile['nextPointDirection']) => {
-            const redTilesOnLine = rowOrCol === 'row' ? mRows[index] : mCols[index];
-            const tileWithNotAllowedDirection = redTilesOnLine?.find(rtol => {
-                if (log) console.log({rtol})
-                if (rowOrCol === 'row' && rtol.x > start && rtol.x < end) {
-                    if (log) console.log("valid for check")
-                    if (rtol.nextPointDirection === notAllowedDirection) return true;
-                } else if (rowOrCol === 'col' && rtol.y > start && rtol.y < end) {
-                    if (log) console.log("valid for check")
-                    if (rtol.nextPointDirection === notAllowedDirection) return true;
-                }
+        for (let currentX = startX; currentX <= endX; currentX++) {
+            let checkedBefore = checkedIfCheckedBefore(currentX, startY)
+            if (checkedBefore === 'not-checked') {
+                pointsToCheck.push({x: currentX, y: startY})
+            } else if (checkedBefore === false) {
                 return false;
-            })
-            if (log) console.log({tileWithNotAllowedDirection})
-            return tileWithNotAllowedDirection === undefined;
+            }
+
+            checkedBefore = checkedIfCheckedBefore(currentX, endY)
+            if (checkedBefore === 'not-checked') {
+                pointsToCheck.push({x: currentX, y: endY})
+            } else if (checkedBefore === false) {
+                return false;
+            }
+        }
+        for (let currentY = startY; currentY <= endY; currentY++) {
+
+            let checkedBefore = checkedIfCheckedBefore(startX, currentY)
+            if (checkedBefore === 'not-checked') {
+                pointsToCheck.push({x: startX, y: currentY})
+            } else if (checkedBefore === false) {
+                return false;
+            }
+
+            checkedBefore = checkedIfCheckedBefore(endX, currentY)
+            if (checkedBefore === 'not-checked') {
+                pointsToCheck.push({x: endX, y: currentY})
+            } else if (checkedBefore === false) {
+                return false;
+            }
         }
 
-        const topLineCheck = checkDirection('row', startX, endX, startY, 'down');
-        const rightLineCheck = checkDirection('col', startY, endY, endX, 'left');
-        const bottomLineCheck = checkDirection('row', startX, endX, endY, 'up');
-        const leftLineCheck = checkDirection('col', startY, endY, startX, 'right');
+        const pointThatsNotInPolygon = pointsToCheck.find(p => {
+            const isInPolygon = checkPointInPolygon(p, polygon);
+            if (isInPolygon) {
+                m[p.y][p.x] = '#';
+            } else {
+                m[p.y][p.x] = 'X';
+            }
+            return !isInPolygon;
+        });
 
-        return topLineCheck && rightLineCheck && bottomLineCheck && leftLineCheck;
+        return pointThatsNotInPolygon === undefined;
     }
 
-    const finalRectangle = rectangles.find(checkRectangle);
+    const finalRectangle = rectangles.find(r => checkRectangle(r, redTiles));
 
 
     console.log("Part 2: ", finalRectangle)
