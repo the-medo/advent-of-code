@@ -22,7 +22,7 @@ const compareDiagramAndCurrentValues = (diagram: D10LightDiagram, currentValues:
     return diagram.every((diagramValue, index) => diagramValue === currentValues[index] % 2 );
 }
 
-const doStep = (step: D10Step, m: D10Machine, usedButtonPressMap: D10UsedButtonPressMap): true | D10Step[] => {
+const doStepPart1 = (step: D10Step, m: D10Machine, usedButtonPressMap: D10UsedButtonPressMap): true | D10Step[] => {
     if (compareDiagramAndCurrentValues(m.finalLightDiagram, step.currentValues)) {
         return true;
     }
@@ -49,7 +49,51 @@ const doStep = (step: D10Step, m: D10Machine, usedButtonPressMap: D10UsedButtonP
     return newSteps;
 }
 
-const computeMachine = (m: D10Machine) => {
+const compareJoltagesAndCurrentValues = (joltages: D10Joltage, currentValues: number[]) => {
+    let hasHigherValues = false;
+    let hasOnlyEqualValues = true;
+    joltages.forEach((joltageValue, index) => {
+        if (joltageValue < currentValues[index]) {
+            hasHigherValues = true;
+        }
+        if (joltageValue !== currentValues[index]) {
+            hasOnlyEqualValues = false;
+        }
+    });
+
+    return {
+        hasHigherValues,
+        hasOnlyEqualValues
+    }
+}
+
+const doStepPart2 = (step: D10Step, m: D10Machine, usedButtonPressMap: D10UsedButtonPressMap): true | D10Step[] => {
+    const stringifiedButtonPressMap = step.buttonPressMap.join('-');
+    if (usedButtonPressMap[stringifiedButtonPressMap]) return [];
+    usedButtonPressMap[stringifiedButtonPressMap] = true;
+    const { hasHigherValues, hasOnlyEqualValues } = compareJoltagesAndCurrentValues(m.joltages, step.currentValues);
+    if (hasHigherValues) return [];
+    if (hasOnlyEqualValues) return true;
+
+    const newSteps: D10Step[] = [];
+    m.buttons.forEach((b, i) => {
+        const newStep: D10Step = {
+            stepNumber: step.stepNumber + 1,
+            buttonPressMap: [...step.buttonPressMap],
+            currentValues: [...step.currentValues],
+        };
+
+        newStep.buttonPressMap[i]++;
+        b.forEach((buttonPress, j) => {
+            newStep.currentValues[buttonPress]++;
+        })
+        newSteps.push(newStep);
+    });
+
+    return newSteps;
+}
+
+const computeMachine = (m: D10Machine, part: 1 | 2) => {
     const stack: D10Step[] = [];
     let lowestValue = Infinity;
     m.buttons.forEach((b, i) => {
@@ -66,8 +110,9 @@ const computeMachine = (m: D10Machine) => {
 
     let step = stack.pop();
     const usedButtonPressMap = {};
+
     while (step !== undefined) {
-        const stepResult = doStep(step, m, usedButtonPressMap);
+        const stepResult = part === 1 ? doStepPart1(step, m, usedButtonPressMap) : doStepPart2(step, m, usedButtonPressMap);
         if (stepResult === true) {
             if (step.stepNumber < lowestValue) lowestValue = step.stepNumber;
         } else {
@@ -76,7 +121,7 @@ const computeMachine = (m: D10Machine) => {
         step = stack.pop();
     }
 
-    console.log("Machine: ", m.finalLightDiagram, ' Result: ', lowestValue)
+    console.log("Machine: ", part === 1 ? m.finalLightDiagram : m.joltages, ' Result: ', lowestValue)
 
     return lowestValue;
 }
@@ -108,10 +153,13 @@ exports.solution = (input: string[]) => {
     })
 
 
-    const machineResults = machines.map(computeMachine);
-    const part1 = machineResults.reduce((acc, curr) => acc + curr, 0);
-
+    const machineResults1 = machines.map((m) => computeMachine(m, 1));
+    const part1 = machineResults1.reduce((acc, curr) => acc + curr, 0);
     console.log("Part 1: ", part1);
+
+    const machineResults2 = machines.map((m) => computeMachine(m, 2));
+    const part2 = machineResults2.reduce((acc, curr) => acc + curr, 0);
+    console.log("Part 2: ", part2);
     
     const t1 = performance.now();
     console.log(`Execution time: ${t1 - t0} milliseconds.`);
