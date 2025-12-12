@@ -23,6 +23,12 @@ const createNewShape = (id: number) => {
     }
 }
 
+const naivelyComputeAreaValidity = (a: D12Area, shapes: D12Shape[]) => {
+    const areaArea = a.dimensions.w * a.dimensions.h;
+    const totalShapeArea = a.shapeCounts.map((count, index) => count * shapes[index].points.length).reduce((acc, curr) => acc + curr, 0);
+    return areaArea > totalShapeArea;
+}
+
 const D12_SHAPE_COUNT = 6; // there is always 6 shapes
 
 exports.solution = (input: string[]) => {
@@ -56,6 +62,10 @@ exports.solution = (input: string[]) => {
 
     console.log("Shapes: ", shapes);
     console.log("Areas: ", areas);
+
+    let totalValidAreas = areas.filter(area => naivelyComputeAreaValidity(area, shapes)).length;
+
+    console.log(`Valid areas: ${totalValidAreas}`)
 
     const t1 = performance.now();
     console.log(`Execution time: ${t1 - t0} milliseconds.`);
